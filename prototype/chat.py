@@ -18,6 +18,9 @@ import re
 import sys
 
 BASE = pathlib.Path(__file__).parent
+# Directorio de datos del usuario (correcciones y movimientos).
+# Mis tests usan CHAT_DATA_DIR=/tmp para no borrar tus datos reales.
+DATA_DIR = pathlib.Path(__import__("os").environ.get("CHAT_DATA_DIR", BASE))
 
 # --- keywords fallback para categoría (hasta que haya finetune) ---
 KEYWORDS = {
@@ -161,8 +164,8 @@ def main(tools_file: str):
     tools = json.loads((BASE / tools_file).read_text(encoding="utf-8"))
     agent = needle.Needle(tools=tools, stateless=True)
     movimientos: list[dict] = []
-    log_mov = (BASE / "movimientos_confirmados.jsonl").open("a", encoding="utf-8")
-    log_corr = (BASE / "corrections.jsonl").open("a", encoding="utf-8")
+    log_mov = (DATA_DIR / "movimientos_confirmados.jsonl").open("a", encoding="utf-8")
+    log_corr = (DATA_DIR / "corrections.jsonl").open("a", encoding="utf-8")
     print("MoneyNeedle probador — escribí un movimiento, /resumen, /salir")
     print("Atajos ante propuesta: [Enter] confirmar | e editar | d descartar\n")
 

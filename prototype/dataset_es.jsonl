@@ -28,3 +28,8 @@
 {"expected": {"categoria": "transporte", "monto": 4500, "tipo": "gasto"}, "query": "uber 4500 hasta lo de mamá"}
 {"expected": {"categoria": "comida", "monto": 18000, "tipo": "gasto"}, "query": "cena 18000 en parrilla"}
 {"expected": {"categoria": "otros", "monto": 25000, "tipo": "gasto"}, "query": "corte de pelo 25000"}
+{"expected": {"categoria": "sueldo", "monto": 200000, "tipo": "ingreso"}, "query": "me pagaron 200k del sueldo"}
+{"expected": {"categoria": "otros", "monto": 200000, "tipo": "gasto"}, "query": "compre 200 mil en ropa"}
+{"expected": {"categoria": "servicios", "monto": 1000, "tipo": "gasto"}, "query": "pague mil en impuestos"}
+{"expected": {"categoria": "comida", "monto": 1000, "tipo": "ingreso"}, "query": "me pagaron 1000 de comida"}
+{"expected": {"categoria": "otros", "monto": 1000000, "tipo": "gasto"}, "query": "gaste 1000000 en arreglo del auto"}

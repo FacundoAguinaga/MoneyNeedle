@@ -25,6 +25,9 @@ prototype/.venv/
 prototype/movimientos_confirmados.jsonl
 prototype/corrections.jsonl
 prototype/.venv/
+# Dataset generado (reproducible con make_dataset.py) y adapters
+prototype/data/
+*.safetensors
 
 # SQLite local
 *.db
