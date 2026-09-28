@@ -25,10 +25,10 @@ KEYWORDS = {
     "comida": ["delivery", "café", "cafe", "cena", "almuerzo", "restaurant", "parrilla", "pizza", "empanada", "helado", "asado"],
     "supermercado": ["súper", "super", "verdulería", "verduleria", "kiosco", "kiosko", "almacén", "almacen", "chino"],
     "alquiler": ["alquiler"],
-    "servicios": ["luz", "gas", "agua", "internet", "tarjeta", "expensas", "celular", "impuesto"],
+    "servicios": ["luz", "gas", "agua", "internet", "tarjeta", "expensas", "celular", "impuesto", "netflix", "spotify", "prime", "disney", "hbo", "youtube", "streaming"],
     "salud": ["farmacia", "médico", "medico", "dentista", "obra social"],
     "sueldo": ["sueldo", "aguinaldo", "salario"],
-    "otros": ["ropa", "zapatilla", "perfume", "peluquería", "peluqueria", "préstamo", "prestamo", "freelance", "banco"],
+    "otros": ["ropa", "zapatilla", "perfume", "peluquería", "peluqueria", "préstamo", "prestamo", "freelance", "banco", "auto", "mecánico", "mecanico", "taller"],
 }
 
 CURRENCIES = [
@@ -43,6 +43,16 @@ def detect_currency(query: str) -> str:
         if any(w in q for w in words):
             return code
     return "ARS"
+
+
+def for_model(query: str) -> str:
+    """Saca tokens que confunden al modelo (monedas -> números fantasma).
+    La moneda la detecta la app por separado."""
+    q = query
+    for _, words in CURRENCIES:
+        for w in words:
+            q = re.sub(rf"\b{re.escape(w)}\b", "", q, flags=re.IGNORECASE)
+    return re.sub(r"\s+", " ", q).strip() or query
 
 UNITS = {
     "cero": 0, "uno": 1, "un": 1, "una": 1, "dos": 2, "tres": 3, "cuatro": 4,
@@ -119,10 +129,17 @@ def numbers_in_query(query: str) -> list[float]:
 
 
 def keyword_category(query: str) -> str | None:
+    # match por palabra completa: "gas" no debe matchear "gaste".
+    # Las frases multi-palabra ("obra social") van por substring, es seguro.
     q = query.lower()
-    for cat, words in KEYWORDS.items():
-        if any(w in q for w in words):
-            return cat
+    words = set(re.findall(r"[a-záéíóúñ]+", q))
+    for cat, kws in KEYWORDS.items():
+        for kw in kws:
+            if " " in kw:
+                if kw in q:
+                    return cat
+            elif kw in words:
+                return cat
     return None
 
 
@@ -167,8 +184,13 @@ def main(tools_file: str):
                 print(f"  {mon}: gastos ${gastos:g} | ingresos ${ingresos:g} | balance ${ingresos-gastos:g}")
             continue
 
-        res = agent.complete(q, max_new_tokens=1024)
-        call = first_call(res)
+        res = None
+        call = None
+        for _ in range(2):  # reintento ante respuesta vacía transitoria
+            res = agent.complete(for_model(q), max_new_tokens=1024)
+            call = first_call(res)
+            if call is not None:
+                break
         if call is None:
             print("  IA: no detecté un movimiento (off-topic o confusión). Probá de nuevo.\n")
             continue
