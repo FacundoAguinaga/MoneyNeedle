@@ -1,0 +1,18 @@
+[
+  {
+    "name": "add_transaction",
+    "description": "Registra un movimiento de finanzas en español. Monto solo número, moneda ARS por defecto. Fecha YYYY-MM-DD, hoy si no se dice.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "tipo": {"type": "string", "enum": ["gasto", "ingreso", "transferencia"]},
+        "monto": {"type": "number"},
+        "moneda": {"type": "string", "default": "ARS"},
+        "categoria": {"type": "string", "enum": ["supermercado", "transporte", "comida", "alquiler", "sueldo", "servicios", "salud", "otros"]},
+        "descripcion": {"type": "string"},
+        "fecha": {"type": "string", "description": "YYYY-MM-DD"}
+      },
+      "required": ["tipo", "monto", "categoria"]
+    }
+  }
+]

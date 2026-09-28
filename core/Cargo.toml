@@ -1,0 +1,9 @@
+[package]
+name = "moneyneedle-core"
+version = "0.1.0"
+edition = "2021"
+description = "Lógica compartida MoneyNeedle: modelos, validación, DB y bridges a Needle/STT"
+
+[lib]
+name = "moneyneedle_core"
+crate-type = ["cdylib", "rlib"]

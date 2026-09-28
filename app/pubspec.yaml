@@ -1,0 +1,21 @@
+name: moneyneedle_app
+description: MoneyNeedle — finanzas local-first con Needle 3.
+publish_to: "none"
+version: 0.1.0+1
+
+environment:
+  sdk: ">=3.2.0 <4.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  # Futuro: flutter_rust_bridge, drift/sqlite, record (mic), sherpa_onnx
+  cupertino_icons: ^1.0.6
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.0
+
+flutter:
+  uses-material-design: true
