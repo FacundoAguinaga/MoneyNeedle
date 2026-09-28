@@ -1,0 +1,34 @@
+[
+  {
+    "name": "add_gasto",
+    "description": "Registra un GASTO en español: gasté, compré, pagué, taxi, súper, cena, alquiler, farmacia. 'k' son miles: 200k=200000. 'luca' es mil: 5 lucas=5000. Monto en pesos sin puntos: 15000.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "monto": {"type": "number", "description": "Solo el número en pesos sin puntos: 15000"},
+        "categoria": {
+          "type": "string",
+          "enum": ["supermercado", "transporte", "comida", "alquiler", "servicios", "salud", "otros"],
+          "description": "supermercado: súper, verdulería, kiosco. transporte: taxi, uber, bondi, nafta. comida: delivery, café, cena, almuerzo. alquiler: alquiler. servicios: luz, tarjeta. salud: farmacia. otros: todo lo demás."
+        }
+      },
+      "required": ["monto", "categoria"]
+    }
+  },
+  {
+    "name": "add_ingreso",
+    "description": "Registra un INGRESO en español: cobré, me entraron, sueldo, aguinaldo, me transfirieron, freelance. 'k' son miles: 200k=200000. Monto en pesos sin puntos: 150000.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "monto": {"type": "number", "description": "Solo el número en pesos sin puntos: 150000"},
+        "categoria": {
+          "type": "string",
+          "enum": ["sueldo", "otros"],
+          "description": "sueldo: sueldo, aguinaldo. otros: freelance, transferencias recibidas, préstamos recibidos."
+        }
+      },
+      "required": ["monto", "categoria"]
+    }
+  }
+]
