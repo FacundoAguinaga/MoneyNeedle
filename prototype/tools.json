@@ -1,7 +1,7 @@
 [
   {
     "name": "add_transaction",
-    "description": "Registra un movimiento de finanzas en español. 'k' son miles: 200k=200000. 'luca' es mil: 5 lucas=5000. La fecha y la moneda las pone la app, no este tool.",
+    "description": "Registra un movimiento de finanzas en español. 'k' son miles: 200k=200000. 'luca' es mil: 5 lucas=5000. 'mil' solo es 1000. Monto en la moneda dicha, sin puntos: 15000. La moneda y la fecha las pone la app, no este tool.",
     "parameters": {
       "type": "object",
       "properties": {
@@ -14,7 +14,7 @@
         "categoria": {
           "type": "string",
           "enum": ["supermercado", "transporte", "comida", "alquiler", "sueldo", "servicios", "salud", "otros"],
-          "description": "supermercado: súper, verdulería, kiosco. transporte: taxi, uber, bondi, nafta. comida: delivery, café, cena, almuerzo, restaurante. alquiler: alquiler. sueldo: sueldo, aguinaldo. servicios: luz, tarjeta. salud: farmacia. otros: peluquería, préstamos, freelance, banco."
+          "description": "supermercado: súper, verdulería, kiosco. transporte: taxi, uber, bondi, nafta. comida: delivery, café, cena, almuerzo, restaurante, asado. alquiler: alquiler. sueldo: sueldo, aguinaldo. servicios: luz, tarjeta, impuestos. salud: farmacia. otros: peluquería, ropa, perfume, préstamos, freelance, banco."
         }
       },
       "required": ["tipo", "monto", "categoria"]

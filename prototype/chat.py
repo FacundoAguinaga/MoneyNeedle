@@ -22,14 +22,27 @@ BASE = pathlib.Path(__file__).parent
 # --- keywords fallback para categoría (hasta que haya finetune) ---
 KEYWORDS = {
     "transporte": ["taxi", "uber", "bondi", "colectivo", "nafta", "subte", "tren", "remis", "estacionamiento"],
-    "comida": ["delivery", "café", "cafe", "cena", "almuerzo", "restaurant", "parrilla", "pizza", "empanada", "helado"],
+    "comida": ["delivery", "café", "cafe", "cena", "almuerzo", "restaurant", "parrilla", "pizza", "empanada", "helado", "asado"],
     "supermercado": ["súper", "super", "verdulería", "verduleria", "kiosco", "kiosko", "almacén", "almacen", "chino"],
     "alquiler": ["alquiler"],
     "servicios": ["luz", "gas", "agua", "internet", "tarjeta", "expensas", "celular", "impuesto"],
     "salud": ["farmacia", "médico", "medico", "dentista", "obra social"],
     "sueldo": ["sueldo", "aguinaldo", "salario"],
-    "otros": ["ropa", "zapatilla", "peluquería", "peluqueria", "préstamo", "prestamo", "freelance", "banco"],
+    "otros": ["ropa", "zapatilla", "perfume", "peluquería", "peluqueria", "préstamo", "prestamo", "freelance", "banco"],
 }
+
+CURRENCIES = [
+    ("USD", ["usd", "u$s", "dólar", "dolar", "dólares", "dolares"]),
+    ("EUR", ["eur", "euro", "euros"]),
+]
+
+
+def detect_currency(query: str) -> str:
+    q = query.lower()
+    for code, words in CURRENCIES:
+        if any(w in q for w in words):
+            return code
+    return "ARS"
 
 UNITS = {
     "cero": 0, "uno": 1, "un": 1, "una": 1, "dos": 2, "tres": 3, "cuatro": 4,
@@ -147,9 +160,11 @@ def main(tools_file: str):
         if q == "/salir":
             break
         if q == "/resumen":
-            gastos = sum(m["monto"] for m in movimientos if m["tipo"] == "gasto")
-            ingresos = sum(m["monto"] for m in movimientos if m["tipo"] == "ingreso")
-            print(f"  {len(movimientos)} movimientos | gastos ${gastos:g} | ingresos ${ingresos:g} | balance ${ingresos-gastos:g}")
+            print(f"  {len(movimientos)} movimientos")
+            for mon in sorted({m.get("moneda", "ARS") for m in movimientos}):
+                gastos = sum(m["monto"] for m in movimientos if m["tipo"] == "gasto" and m.get("moneda", "ARS") == mon)
+                ingresos = sum(m["monto"] for m in movimientos if m["tipo"] == "ingreso" and m.get("moneda", "ARS") == mon)
+                print(f"  {mon}: gastos ${gastos:g} | ingresos ${ingresos:g} | balance ${ingresos-gastos:g}")
             continue
 
         res = agent.complete(q, max_new_tokens=1024)
@@ -173,7 +188,10 @@ def main(tools_file: str):
             args["categoria"] = sug  # la regla manda hasta el finetune
         if not grounded:
             print(f"  ! monto ${args.get('monto')} NO aparece en tu frase (posible alucinación). Revisá con e.")
-        print(f"  IA propone: {args.get('tipo')} ${args.get('monto', '?'):g} [{args.get('categoria')}] grounded={'sí' if grounded else 'NO'}")
+        moneda = detect_currency(q)
+        if moneda != "ARS":
+            print(f"  moneda detectada: {moneda}")
+        print(f"  IA propone: {args.get('tipo')} ${args.get('monto', '?'):g} {moneda} [{args.get('categoria')}] grounded={'sí' if grounded else 'NO'}")
 
         acc = input("  [Enter]/e/d> ").strip().lower()
         if acc == "d":
@@ -186,6 +204,7 @@ def main(tools_file: str):
                 if nuevo:
                     final[campo] = float(nuevo) if campo == "monto" else nuevo
         final.setdefault("fecha", datetime.date.today().isoformat())
+        final["moneda"] = moneda
         final["frase"] = q
         movimientos.append(final)
         log_mov.write(json.dumps(final, ensure_ascii=False) + "\n")
