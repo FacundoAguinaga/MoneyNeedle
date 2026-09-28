@@ -8,7 +8,7 @@
         "tipo": {
           "type": "string",
           "enum": ["gasto", "ingreso"],
-          "description": "gasto: gasté, compré, pagué, taxi, súper, cena. ingreso: cobré, me entraron, sueldo, aguinaldo, me transfirieron."
+          "description": "gasto: gasté, compré, pagué, taxi, súper, cena. ingreso: cobré, me entraron, me pagaron, sueldo, aguinaldo, me transfirieron."
         },
         "monto": {"type": "number", "description": "Solo el número en pesos sin puntos: 15000"},
         "categoria": {

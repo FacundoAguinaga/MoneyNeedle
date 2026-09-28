@@ -17,7 +17,7 @@
   },
   {
     "name": "add_ingreso",
-    "description": "Registra un INGRESO en español: cobré, me entraron, sueldo, aguinaldo, me transfirieron, freelance. 'k' son miles: 200k=200000. Monto en pesos sin puntos: 150000.",
+    "description": "Registra un INGRESO en español: cobré, me entraron, me pagaron, sueldo, aguinaldo, me transfirieron, freelance. 'k' son miles: 200k=200000. Monto en pesos sin puntos: 150000.",
     "parameters": {
       "type": "object",
       "properties": {

@@ -25,9 +25,10 @@ KEYWORDS = {
     "comida": ["delivery", "café", "cafe", "cena", "almuerzo", "restaurant", "parrilla", "pizza", "empanada", "helado"],
     "supermercado": ["súper", "super", "verdulería", "verduleria", "kiosco", "kiosko", "almacén", "almacen", "chino"],
     "alquiler": ["alquiler"],
-    "servicios": ["luz", "gas", "agua", "internet", "tarjeta", "expensas", "celular"],
+    "servicios": ["luz", "gas", "agua", "internet", "tarjeta", "expensas", "celular", "impuesto"],
     "salud": ["farmacia", "médico", "medico", "dentista", "obra social"],
     "sueldo": ["sueldo", "aguinaldo", "salario"],
+    "otros": ["ropa", "zapatilla", "peluquería", "peluqueria", "préstamo", "prestamo", "freelance", "banco"],
 }
 
 UNITS = {
@@ -87,7 +88,7 @@ def words_to_number(text: str) -> list[float]:
 def numbers_in_query(query: str) -> list[float]:
     """Todos los montos candidatos mencionados en el texto."""
     out = []
-    for m in re.finditer(r"(\d[\d\.,]*)\s*(k|lucas?)?", query.lower()):
+    for m in re.finditer(r"(\d[\d\.,]*)\s*(millones|millón|millon|mil|k|lucas?)?", query.lower()):
         raw = m.group(1).replace(".", "").replace(",", "")
         try:
             val = float(raw)
@@ -96,6 +97,9 @@ def numbers_in_query(query: str) -> list[float]:
         suffix = m.group(2) or ""
         if suffix.startswith("k") or suffix.startswith("luca"):
             val *= 1000
+        elif suffix.startswith("mil"):
+            # "mil", "millón", "millones" (mil solo ya es x1000: "200 mil")
+            val *= 1000 if suffix == "mil" else 1_000_000
         out.append(val)
     out.extend(words_to_number(query))
     return out
