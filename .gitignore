@@ -21,6 +21,11 @@ prototype/.venv/
 *.bin
 !assets/models/.gitkeep
 
+# Datos del usuario (nunca se versionan)
+prototype/movimientos_confirmados.jsonl
+prototype/corrections.jsonl
+prototype/.venv/
+
 # SQLite local
 *.db
 *.db-journal
