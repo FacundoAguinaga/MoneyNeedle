@@ -154,7 +154,7 @@ def first_call(result: dict) -> dict | None:
     return None
 
 
-def main(tools_file: str):
+def main(tools_file: str, weights: str | None):
     try:
         import needle
     except ImportError:
@@ -162,7 +162,7 @@ def main(tools_file: str):
         sys.exit(1)
 
     tools = json.loads((BASE / tools_file).read_text(encoding="utf-8"))
-    agent = needle.Needle(tools=tools, stateless=True)
+    agent = needle.Needle(tools=tools, stateless=True, **({"weights": weights} if weights else {}))
     movimientos: list[dict] = []
     log_mov = (DATA_DIR / "movimientos_confirmados.jsonl").open("a", encoding="utf-8")
     log_corr = (DATA_DIR / "corrections.jsonl").open("a", encoding="utf-8")
@@ -251,4 +251,6 @@ def main(tools_file: str):
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     ap.add_argument("--tools", default="tools.json")
-    main(ap.parse_args().tools)
+    ap.add_argument("--weights", default=None, help="ruta a tuned.cact")
+    args = ap.parse_args()
+    main(args.tools, args.weights)

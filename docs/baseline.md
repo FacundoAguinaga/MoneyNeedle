@@ -9,8 +9,15 @@ confidence y todo cae en suppressed).
 
 | Variante | Tool+tipo | Exacto (tipo+monto+cat) |
 |---|---|---|
-| 1 tool `add_transaction` (tipo enum) | 73% (22/30) | 27% (8/30) |
-| 2 tools `add_gasto` / `add_ingreso` | 77% (23/30) | 30% (9/30) |
+| 1 tool `add_transaction` base (30 frases) | 73% (22/30) | 27% (8/30) |
+| 2 tools `add_gasto` / `add_ingreso` base (30 frases) | 77% (23/30) | 30% (9/30) |
+| 1 tool base, tools slim (112 frases) | 62% (70/112) | 21% (24/112) |
+| **1 tool FINETUNE 3 epochs, 1500 ej. (112 frases)** | **98% (110/112)** | **75% (84/112)** |
+
+OJO: el 75% es sobre las semillas de entrenamiento (optimista). Falta medir
+generalización con frases nuevas no vistas. Errores que quedan: confusión
+salud↔servicios (luz/gas→salud), "N lucas" a veces x10 de más
+("50 lucas"→100000), supermercado por defecto en ropa/banco.
 
 ## Hallazgos
 

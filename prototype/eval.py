@@ -53,7 +53,7 @@ def score(expected: dict, call: dict | None) -> tuple[bool, bool, str]:
     return (tool_ok and tipo_ok, tool_ok and tipo_ok and monto_ok and cat_ok, detail)
 
 
-def main(limit: int, tools_file: str):
+def main(limit: int, tools_file: str, weights: str | None):
     try:
         import needle
     except ImportError:
@@ -61,13 +61,13 @@ def main(limit: int, tools_file: str):
         return
 
     TOOLS = json.loads((BASE / tools_file).read_text(encoding="utf-8"))
-    print(f"Tools: {tools_file} ({[t['name'] for t in TOOLS]})")
+    print(f"Tools: {tools_file} ({[t['name'] for t in TOOLS]}) | weights: {weights or 'base'}")
 
     rows = [json.loads(l) for l in (BASE / "dataset_es.jsonl").read_text(encoding="utf-8").splitlines() if l.strip()]
     if limit:
         rows = rows[:limit]
 
-    agent = needle.Needle(tools=TOOLS, stateless=True)
+    agent = needle.Needle(tools=TOOLS, stateless=True, **({"weights": weights} if weights else {}))
     n_tool = n_full = 0
     for r in rows:
         try:
@@ -98,5 +98,6 @@ if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     ap.add_argument("--limit", type=int, default=0)
     ap.add_argument("--tools", default="tools.json")
+    ap.add_argument("--weights", default=None, help="ruta a tuned.cact")
     args = ap.parse_args()
-    main(args.limit, args.tools)
+    main(args.limit, args.tools, args.weights)

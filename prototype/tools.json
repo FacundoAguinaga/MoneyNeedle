@@ -1,20 +1,20 @@
 [
   {
     "name": "add_transaction",
-    "description": "Registra un movimiento de finanzas en español. 'k' son miles: 200k=200000. 'luca' es mil: 5 lucas=5000. 'mil' solo es 1000. Monto en la moneda dicha, sin puntos: 15000. La moneda y la fecha las pone la app, no este tool.",
+    "description": "Movimiento de finanzas en español. k=miles (200k=200000). luca=mil (5 lucas=5000). mil solo=1000. Fecha y moneda las pone la app.",
     "parameters": {
       "type": "object",
       "properties": {
         "tipo": {
           "type": "string",
           "enum": ["gasto", "ingreso"],
-          "description": "gasto: gasté, compré, pagué, taxi, súper, cena. ingreso: cobré, me entraron, me pagaron, sueldo, aguinaldo, me transfirieron."
+          "description": "gasto: gasté, compré, pagué. ingreso: cobré, me entraron, me pagaron, sueldo, aguinaldo."
         },
-        "monto": {"type": "number", "description": "Solo el número en pesos sin puntos: 15000"},
+        "monto": {"type": "number", "description": "Número en pesos sin puntos: 15000"},
         "categoria": {
           "type": "string",
           "enum": ["supermercado", "transporte", "comida", "alquiler", "sueldo", "servicios", "salud", "otros"],
-          "description": "supermercado: súper, verdulería, kiosco. transporte: taxi, uber, bondi, nafta. comida: delivery, café, cena, almuerzo, restaurante, asado. alquiler: alquiler. sueldo: sueldo, aguinaldo. servicios: luz, tarjeta, impuestos. salud: farmacia. otros: peluquería, ropa, perfume, préstamos, freelance, banco."
+          "description": "supermercado: súper, kiosco. transporte: taxi, uber, bondi, nafta. comida: delivery, café, cena, asado. alquiler: alquiler. sueldo: sueldo. servicios: luz, tarjeta, impuestos, netflix. salud: farmacia. otros: resto."
         }
       },
       "required": ["tipo", "monto", "categoria"]
