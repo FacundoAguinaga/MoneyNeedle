@@ -1,35 +1,112 @@
-{"expected": {"categoria": "supermercado", "monto": 5000, "tipo": "gasto"}, "query": "gasté 5000 en supermercado"}
-{"expected": {"categoria": "supermercado", "monto": 5000, "tipo": "gasto"}, "query": "gasté 5 lucas en súper"}
-{"expected": {"categoria": "supermercado", "monto": 15000, "tipo": "gasto"}, "query": "super 15000 con tarjeta"}
-{"expected": {"categoria": "comida", "monto": 12000, "tipo": "gasto"}, "query": "compré comida por 12000"}
-{"expected": {"categoria": "comida", "monto": 7000, "tipo": "gasto"}, "query": "hoy almorcé por 7000"}
-{"expected": {"categoria": "comida", "monto": 9500, "tipo": "gasto"}, "query": "delivery 9500"}
-{"expected": {"categoria": "comida", "monto": 2500, "tipo": "gasto"}, "query": "café 2500 esta mañana"}
-{"expected": {"categoria": "transporte", "monto": 8000, "tipo": "gasto"}, "query": "taxi 8000 ayer a la noche"}
-{"expected": {"categoria": "transporte", "monto": 30000, "tipo": "gasto"}, "query": "nafta 30000 en shell"}
-{"expected": {"categoria": "transporte", "monto": 1500, "tipo": "gasto"}, "query": "bondi 1500"}
-{"expected": {"categoria": "alquiler", "monto": 45000, "tipo": "gasto"}, "query": "pagué 45000 de alquiler"}
-{"expected": {"categoria": "servicios", "monto": 12000, "tipo": "gasto"}, "query": "el lunes pagué 12000 de luz"}
-{"expected": {"categoria": "servicios", "monto": 80000, "tipo": "gasto"}, "query": "pagué la tarjeta 80000"}
-{"expected": {"categoria": "salud", "monto": 8700, "tipo": "gasto"}, "query": "farmacia 8700"}
-{"expected": {"categoria": "supermercado", "monto": 6500, "tipo": "gasto"}, "query": "verdulería 6500 en efectivo"}
-{"expected": {"categoria": "otros", "monto": 3000, "tipo": "gasto"}, "query": "ayer gasté 3000 en kiosco"}
-{"expected": {"categoria": "sueldo", "monto": 200000, "tipo": "ingreso"}, "query": "me entraron 200k del sueldo"}
-{"expected": {"categoria": "sueldo", "monto": 200000, "tipo": "ingreso"}, "query": "me entraron doscientos mil del sueldo"}
-{"expected": {"categoria": "otros", "monto": 150000, "tipo": "ingreso"}, "query": "cobré 150000 de freelance"}
-{"expected": {"categoria": "otros", "monto": 50000, "tipo": "ingreso"}, "query": "me transfirieron 50000"}
-{"expected": {"categoria": "sueldo", "monto": 300000, "tipo": "ingreso"}, "query": "aguinaldo 300000"}
-{"expected": {"categoria": "otros", "monto": 20000, "tipo": "gasto"}, "query": "pasé 20000 a mi cuenta del banco"}
-{"expected": {"categoria": "otros", "monto": 10000, "tipo": "gasto"}, "query": "le presté 10000 a juan"}
-{"expected": {"categoria": null, "monto": null, "tipo": null}, "query": "hola qué hora es"}
-{"expected": {"categoria": null, "monto": null, "tipo": null}, "query": "contame un chiste"}
-{"expected": {"categoria": null, "monto": null, "tipo": null}, "query": "cómo está el clima mañana"}
-{"expected": {"categoria": "supermercado", "monto": 5000, "tipo": "gasto"}, "query": "gaste cinco mil en super mercado"}
-{"expected": {"categoria": "transporte", "monto": 4500, "tipo": "gasto"}, "query": "uber 4500 hasta lo de mamá"}
-{"expected": {"categoria": "comida", "monto": 18000, "tipo": "gasto"}, "query": "cena 18000 en parrilla"}
-{"expected": {"categoria": "otros", "monto": 25000, "tipo": "gasto"}, "query": "corte de pelo 25000"}
-{"expected": {"categoria": "sueldo", "monto": 200000, "tipo": "ingreso"}, "query": "me pagaron 200k del sueldo"}
-{"expected": {"categoria": "otros", "monto": 200000, "tipo": "gasto"}, "query": "compre 200 mil en ropa"}
-{"expected": {"categoria": "servicios", "monto": 1000, "tipo": "gasto"}, "query": "pague mil en impuestos"}
-{"expected": {"categoria": "comida", "monto": 1000, "tipo": "ingreso"}, "query": "me pagaron 1000 de comida"}
-{"expected": {"categoria": "otros", "monto": 1000000, "tipo": "gasto"}, "query": "gaste 1000000 en arreglo del auto"}
+{"query": "gasté 5000 en supermercado", "expected": {"tipo": "gasto", "monto": 5000, "categoria": "supermercado"}}
+{"query": "super 14500 con debito", "expected": {"tipo": "gasto", "monto": 14500, "categoria": "supermercado"}}
+{"query": "cobré el sueldo 550000", "expected": {"tipo": "ingreso", "monto": 550000, "categoria": "sueldo"}}
+{"query": "ayer gasté 3200 en el almacén", "expected": {"tipo": "gasto", "monto": 3200, "categoria": "supermercado"}}
+{"query": "verdulería 6500 en efectivo", "expected": {"tipo": "gasto", "monto": 6500, "categoria": "supermercado"}}
+{"query": "me depositaron 750000 del sueldo", "expected": {"tipo": "ingreso", "monto": 750000, "categoria": "sueldo"}}
+{"query": "hoy compré 4800 en el kiosco", "expected": {"tipo": "gasto", "monto": 4800, "categoria": "supermercado"}}
+{"query": "hola cómo estás todo bien", "expected": {"tipo": null, "monto": null, "categoria": null}}
+{"query": "compré 28000 en coto", "expected": {"tipo": "gasto", "monto": 28000, "categoria": "supermercado"}}
+{"query": "gaste 12k en la verduleria", "expected": {"tipo": "gasto", "monto": 12000, "categoria": "supermercado"}}
+{"query": "sueldo 850000 en la cuenta", "expected": {"tipo": "ingreso", "monto": 850000, "categoria": "sueldo"}}
+{"query": "ayer dejé 45k en carrefour", "expected": {"tipo": "gasto", "monto": 45000, "categoria": "supermercado"}}
+{"query": "gasté 5 lucas en el súper", "expected": {"tipo": "gasto", "monto": 5000, "categoria": "supermercado"}}
+{"query": "aguinaldo 320000 en el banco", "expected": {"tipo": "ingreso", "monto": 320000, "categoria": "sueldo"}}
+{"query": "el lunes pague 8 lucas de verduleria", "expected": {"tipo": "gasto", "monto": 8000, "categoria": "supermercado"}}
+{"query": "contame un chiste de gallegos", "expected": {"tipo": null, "monto": null, "categoria": null}}
+{"query": "súper 35.000 con tarjeta", "expected": {"tipo": "gasto", "monto": 35000, "categoria": "supermercado"}}
+{"query": "compre 18.500 en el chino", "expected": {"tipo": "gasto", "monto": 18500, "categoria": "supermercado"}}
+{"query": "cobré 420000 de aguinaldo", "expected": {"tipo": "ingreso", "monto": 420000, "categoria": "sueldo"}}
+{"query": "gasté cuatro mil en el kiosco", "expected": {"tipo": "gasto", "monto": 4000, "categoria": "supermercado"}}
+{"query": "pagué veinticinco mil en supermercado", "expected": {"tipo": "gasto", "monto": 25000, "categoria": "supermercado"}}
+{"query": "me entraron 600000 de sueldo", "expected": {"tipo": "ingreso", "monto": 600000, "categoria": "sueldo"}}
+{"query": "taxi 8000 ayer a la noche", "expected": {"tipo": "gasto", "monto": 8000, "categoria": "transporte"}}
+{"query": "qué hora es en buenos aires", "expected": {"tipo": null, "monto": null, "categoria": null}}
+{"query": "uber 4500 hasta lo de mamá", "expected": {"tipo": "gasto", "monto": 4500, "categoria": "transporte"}}
+{"query": "nafta 30000 en la ypf", "expected": {"tipo": "gasto", "monto": 30000, "categoria": "transporte"}}
+{"query": "me pagaron 200k del sueldo", "expected": {"tipo": "ingreso", "monto": 200000, "categoria": "sueldo"}}
+{"query": "cargué 1200 en la sube", "expected": {"tipo": "gasto", "monto": 1200, "categoria": "transporte"}}
+{"query": "remis 6000 al aeropuerto", "expected": {"tipo": "gasto", "monto": 6000, "categoria": "transporte"}}
+{"query": "cobré 400k de aguinaldo", "expected": {"tipo": "ingreso", "monto": 400000, "categoria": "sueldo"}}
+{"query": "hoy pague 950 de colectivo", "expected": {"tipo": "gasto", "monto": 950, "categoria": "transporte"}}
+{"query": "cómo va a estar el clima hoy", "expected": {"tipo": null, "monto": null, "categoria": null}}
+{"query": "puse 25k de nafta", "expected": {"tipo": "gasto", "monto": 25000, "categoria": "transporte"}}
+{"query": "cabify 7k hasta el laburo", "expected": {"tipo": "gasto", "monto": 7000, "categoria": "transporte"}}
+{"query": "cobré 300 lucas de sueldo", "expected": {"tipo": "ingreso", "monto": 300000, "categoria": "sueldo"}}
+{"query": "el taxi me salió 6 lucas", "expected": {"tipo": "gasto", "monto": 6000, "categoria": "transporte"}}
+{"query": "gasté 40 mil en nafta infinia", "expected": {"tipo": "gasto", "monto": 40000, "categoria": "transporte"}}
+{"query": "me pagaron 500 mil del sueldo", "expected": {"tipo": "ingreso", "monto": 500000, "categoria": "sueldo"}}
+{"query": "cargué 15.000 de nafta hoy", "expected": {"tipo": "gasto", "monto": 15000, "categoria": "transporte"}}
+{"query": "llamame un taxi para ir al centro", "expected": {"tipo": null, "monto": null, "categoria": null}}
+{"query": "remís 9.800 hasta palermo", "expected": {"tipo": "gasto", "monto": 9800, "categoria": "transporte"}}
+{"query": "gaste tres mil en taxi", "expected": {"tipo": "gasto", "monto": 3000, "categoria": "transporte"}}
+{"query": "sueldo 680.000 acreditado hoy", "expected": {"tipo": "ingreso", "monto": 680000, "categoria": "sueldo"}}
+{"query": "delivery 9500 de empanadas", "expected": {"tipo": "gasto", "monto": 9500, "categoria": "comida"}}
+{"query": "almorcé por 7200 con nacho", "expected": {"tipo": "gasto", "monto": 7200, "categoria": "comida"}}
+{"query": "me pagaron 180.000 de aguinaldo", "expected": {"tipo": "ingreso", "monto": 180000, "categoria": "sueldo"}}
+{"query": "cena 18000 en parrilla ayer", "expected": {"tipo": "gasto", "monto": 18000, "categoria": "comida"}}
+{"query": "poné algo de rock nacional", "expected": {"tipo": null, "monto": null, "categoria": null}}
+{"query": "café con medialunas 2800", "expected": {"tipo": "gasto", "monto": 2800, "categoria": "comida"}}
+{"query": "me entraron doscientos mil del sueldo", "expected": {"tipo": "ingreso", "monto": 200000, "categoria": "sueldo"}}
+{"query": "hoy gasté 14000 en sushi", "expected": {"tipo": "gasto", "monto": 14000, "categoria": "comida"}}
+{"query": "me entraron cien mil del aguinaldo", "expected": {"tipo": "ingreso", "monto": 100000, "categoria": "sueldo"}}
+{"query": "asado 32000 para el domingo", "expected": {"tipo": "gasto", "monto": 32000, "categoria": "comida"}}
+{"query": "cobré cuatrocientos mil de sueldo", "expected": {"tipo": "ingreso", "monto": 400000, "categoria": "sueldo"}}
+{"query": "dejé 15k en el almuerzo", "expected": {"tipo": "gasto", "monto": 15000, "categoria": "comida"}}
+{"query": "cuánto falta para el fin de semana", "expected": {"tipo": null, "monto": null, "categoria": null}}
+{"query": "pedí pedidosya por 8k", "expected": {"tipo": "gasto", "monto": 8000, "categoria": "comida"}}
+{"query": "el cafe me costó 3 lucas", "expected": {"tipo": "gasto", "monto": 3000, "categoria": "comida"}}
+{"query": "cobré 150000 de freelance", "expected": {"tipo": "ingreso", "monto": 150000, "categoria": "otros"}}
+{"query": "gasté 22 mil en el restaurante", "expected": {"tipo": "gasto", "monto": 22000, "categoria": "comida"}}
+{"query": "cena 24.000 con los chicos", "expected": {"tipo": "gasto", "monto": 24000, "categoria": "comida"}}
+{"query": "me transfirieron 50000 de un laburito", "expected": {"tipo": "ingreso", "monto": 50000, "categoria": "otros"}}
+{"query": "gaste 11.500 en la pizzería", "expected": {"tipo": "gasto", "monto": 11500, "categoria": "comida"}}
+{"query": "recordame que tengo que llamar al médico", "expected": {"tipo": null, "monto": null, "categoria": null}}
+{"query": "pagué seis mil por la merienda", "expected": {"tipo": "gasto", "monto": 6000, "categoria": "comida"}}
+{"query": "pague 280000 de alquiler", "expected": {"tipo": "gasto", "monto": 280000, "categoria": "alquiler"}}
+{"query": "me pagaron un proyecto 120000", "expected": {"tipo": "ingreso", "monto": 120000, "categoria": "otros"}}
+{"query": "transferí 350000 del alquiler", "expected": {"tipo": "gasto", "monto": 350000, "categoria": "alquiler"}}
+{"query": "alquiler 400k por transferencia", "expected": {"tipo": "gasto", "monto": 400000, "categoria": "alquiler"}}
+{"query": "me devolvieron 15000 que presté", "expected": {"tipo": "ingreso", "monto": 15000, "categoria": "otros"}}
+{"query": "pagué 180 lucas de alquiler", "expected": {"tipo": "gasto", "monto": 180000, "categoria": "alquiler"}}
+{"query": "buenas tardes qué podés hacer", "expected": {"tipo": null, "monto": null, "categoria": null}}
+{"query": "alquiler 320.000 este mes", "expected": {"tipo": "gasto", "monto": 320000, "categoria": "alquiler"}}
+{"query": "pague doscientos mil de alquiler", "expected": {"tipo": "gasto", "monto": 200000, "categoria": "alquiler"}}
+{"query": "vendí una mesa por 35000", "expected": {"tipo": "ingreso", "monto": 35000, "categoria": "otros"}}
+{"query": "el lunes pagué 12000 de luz", "expected": {"tipo": "gasto", "monto": 12000, "categoria": "servicios"}}
+{"query": "pagué la tarjeta 85000", "expected": {"tipo": "gasto", "monto": 85000, "categoria": "servicios"}}
+{"query": "me transfirieron 30000 a mercadopago", "expected": {"tipo": "ingreso", "monto": 30000, "categoria": "otros"}}
+{"query": "expensas 45000 del depto", "expected": {"tipo": "gasto", "monto": 45000, "categoria": "servicios"}}
+{"query": "a qué hora juega river hoy", "expected": {"tipo": null, "monto": null, "categoria": null}}
+{"query": "pagué 6500 de gas ayer", "expected": {"tipo": "gasto", "monto": 6500, "categoria": "servicios"}}
+{"query": "celular 9200 este mes", "expected": {"tipo": "gasto", "monto": 9200, "categoria": "servicios"}}
+{"query": "me pagaron 80k por una web", "expected": {"tipo": "ingreso", "monto": 80000, "categoria": "otros"}}
+{"query": "netflix 7500 en la tarjeta", "expected": {"tipo": "gasto", "monto": 7500, "categoria": "servicios"}}
+{"query": "pagué 50k de expensas", "expected": {"tipo": "gasto", "monto": 50000, "categoria": "servicios"}}
+{"query": "me entraron 45k de freelance", "expected": {"tipo": "ingreso", "monto": 45000, "categoria": "otros"}}
+{"query": "pagué mil pesos de impuestos", "expected": {"tipo": "gasto", "monto": 1000, "categoria": "servicios"}}
+{"query": "cuál es la capital de francia", "expected": {"tipo": null, "monto": null, "categoria": null}}
+{"query": "15 lucas de luz me vinieron", "expected": {"tipo": "gasto", "monto": 15000, "categoria": "servicios"}}
+{"query": "pague 22.000 de gas natural", "expected": {"tipo": "gasto", "monto": 22000, "categoria": "servicios"}}
+{"query": "cobré 50 lucas de una changa", "expected": {"tipo": "ingreso", "monto": 50000, "categoria": "otros"}}
+{"query": "pagué ocho mil de agua", "expected": {"tipo": "gasto", "monto": 8000, "categoria": "servicios"}}
+{"query": "farmacia 8700 por los remedios", "expected": {"tipo": "gasto", "monto": 8700, "categoria": "salud"}}
+{"query": "me transfirieron 100 mil pesos", "expected": {"tipo": "ingreso", "monto": 100000, "categoria": "otros"}}
+{"query": "dentista 25000 por una muela", "expected": {"tipo": "gasto", "monto": 25000, "categoria": "salud"}}
+{"query": "abrí la puerta por favor", "expected": {"tipo": null, "monto": null, "categoria": null}}
+{"query": "dejé 18k en farmacity", "expected": {"tipo": "gasto", "monto": 18000, "categoria": "salud"}}
+{"query": "pague 10 lucas de farmacia", "expected": {"tipo": "gasto", "monto": 10000, "categoria": "salud"}}
+{"query": "cobré 95.000 por un diseño", "expected": {"tipo": "ingreso", "monto": 95000, "categoria": "otros"}}
+{"query": "gasté 32.000 en el oculista", "expected": {"tipo": "gasto", "monto": 32000, "categoria": "salud"}}
+{"query": "pagué siete mil de remedios", "expected": {"tipo": "gasto", "monto": 7000, "categoria": "salud"}}
+{"query": "me entraron 250.000 de asesoría", "expected": {"tipo": "ingreso", "monto": 250000, "categoria": "otros"}}
+{"query": "compré zapatillas por 65000", "expected": {"tipo": "gasto", "monto": 65000, "categoria": "otros"}}
+{"query": "tenés ganas de charlar un rato", "expected": {"tipo": null, "monto": null, "categoria": null}}
+{"query": "pasé 20000 a mi cuenta del banco", "expected": {"tipo": "gasto", "monto": 20000, "categoria": "otros"}}
+{"query": "gaste 80k en ropa nueva", "expected": {"tipo": "gasto", "monto": 80000, "categoria": "otros"}}
+{"query": "cobré ochenta mil por el trabajo", "expected": {"tipo": "ingreso", "monto": 80000, "categoria": "otros"}}
+{"query": "compré 200 mil en ropa", "expected": {"tipo": "gasto", "monto": 200000, "categoria": "otros"}}
+{"query": "arreglo del auto 180.000", "expected": {"tipo": "gasto", "monto": 180000, "categoria": "otros"}}
+{"query": "me pagaron quinientos mil freelance", "expected": {"tipo": "ingreso", "monto": 500000, "categoria": "otros"}}
+{"query": "pague tres millones por el auto", "expected": {"tipo": "gasto", "monto": 3000000, "categoria": "otros"}}
+{"query": "chau che nos vemos mañana", "expected": {"tipo": null, "monto": null, "categoria": null}}
