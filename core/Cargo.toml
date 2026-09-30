@@ -7,3 +7,11 @@ description = "Lógica compartida MoneyNeedle: modelos, validación, DB y bridge
 [lib]
 name = "moneyneedle_core"
 crate-type = ["cdylib", "rlib"]
+
+[features]
+# Habilita el ejemplo FFI (necesita NEEDLE_LIB_DIR con libneedle.a).
+needle-engine = []
+
+[[example]]
+name = "needle_smoke"
+required-features = ["needle-engine"]
