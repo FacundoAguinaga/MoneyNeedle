@@ -43,3 +43,10 @@
     STT_12 si no está el pack offline. Se intenta offline primero y ante
     error 12/13/2 se reintenta online una vez. El permiso de mic se pide
     con `permission_handler`, con atajo a Ajustes si está bloqueado.
+14. **SQLite en Rust (rusqlite bundled).** Sin pasar por JSONL en Rust:
+    `store.rs` con tabla `movements` + validación, expuesto por FRB
+    (`confirmMovement`/`listMovements`). DB en documents dir de la app.
+    `export_corrections_jsonl` genera training data en el formato de
+    `make_dataset.py` para la ronda 3. Regla operativa: el `.so` arm64
+    debe recompilarse tras cada cambio del core o FRB frena el arranque
+    (content-hash mismatch = pantalla negra).
