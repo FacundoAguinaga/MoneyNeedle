@@ -7,6 +7,7 @@
 
 pub mod parse;
 pub mod needle_bridge;
+pub mod pipeline;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum TipoMovimiento {
