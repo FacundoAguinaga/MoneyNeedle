@@ -21,9 +21,11 @@ fn main() {
     }
     if is_android {
         // En Android, libc++_shared viene del NDK (completo, sin shim).
+        // OJO: se pasa por ruta completa, NO por -L: si el dir del sysroot
+        // entra al search path, el linker pesca objetos de libc.a estática
+        // (ej. un getauxval incompatible que crashea al cargar en el device).
         if let Some(libdir) = ndk_cxx_libdir(&target) {
-            println!("cargo:rustc-link-search=native={libdir}");
-            println!("cargo:rustc-link-lib=dylib=c++_shared");
+            println!("cargo:rustc-link-arg={libdir}/libc++_shared.so");
             return;
         }
         panic!("ANDROID_NDK_HOME no apunta a un NDK válido");
