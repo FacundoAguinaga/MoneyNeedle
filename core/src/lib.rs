@@ -1,10 +1,12 @@
-mod frb_generated; /* AUTO INJECTED BY flutter_rust_bridge. This line may not be accurate, and you can change it according to your needs. */
 //! MoneyNeedle core — lógica compartida (Rust + Flutter vía FFI).
 //!
 //! - `parse`: port de `prototype/mn_parse.py` (montos, categorías, moneda).
 //! - Modelos + validación pura, cero deps para que `cargo test` corra.
 //! - Futuro: rusqlite (persistencia), needle-bridge (C API .cact),
 //!   stt-bridge (sherpa-onnx).
+
+/* AUTO INJECTED BY flutter_rust_bridge. */
+mod frb_generated;
 
 pub mod parse;
 pub mod needle_bridge;
