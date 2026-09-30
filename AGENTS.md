@@ -53,5 +53,7 @@ Leé `CONTEXT.md` primero. Acá van las reglas que salieron de romper cosas.
 
 - Prototype primero: validar en Python antes de portar a `core/` (Rust).
 - Commits chicos, estilo conventional (`feat:`, `fix:`, `data:`, `docs:`).
-- `cargo test` debe pasar si se toca `core/`.
+- Lógica pura de `prototype/` vive en `mn_parse.py` y lleva tests en
+  `test_mn_parse.py` (`python -m unittest`). Correrlos antes de commitear
+  si se toca el prototype. `cargo test` debe pasar si se toca `core/`.
 - No crear archivos innecesarios; preferir editar los existentes.

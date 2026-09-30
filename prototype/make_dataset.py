@@ -20,12 +20,11 @@ import argparse
 import json
 import pathlib
 import random
-import re
 
 BASE = pathlib.Path(__file__).parent
 DATA = BASE / "data"
 
-NUM_RE = re.compile(r"(\d[\d\.,]*)\s*(millones|millón|millon|mil|k|lucas?)?", re.IGNORECASE)
+from mn_parse import NUM_RE, find_word_numbers
 
 OFF_TOPIC = [
     "hola qué hora es", "contame un chiste", "cómo está el clima mañana",
@@ -71,23 +70,34 @@ def load_seeds() -> tuple[list[dict], list[str]]:
 
 def vary_amount(seed: dict, rng: random.Random) -> dict | None:
     m = NUM_RE.search(seed["query"])
-    if not m:
+    if m:
+        suffix = (m.group(2) or "").lower()
+        if suffix in ("k", "luca", "lucas", "mil"):
+            new = rng.randint(2, 900)
+            monto, new_txt = float(new * 1000), f"{new}{m.group(2)}"
+        elif suffix.startswith("millo"):  # millón / millones
+            new = rng.randint(1, 50)
+            monto, new_txt = float(new * 1_000_000), f"{new} millones"
+        else:
+            # conserva el formato del original (puntos de miles o decimales)
+            new = rng.choice(AMOUNTS)
+            if "." in m.group(1):
+                new_txt = f"{new:,}".replace(",", ".")
+            else:
+                new_txt = f"{new}"
+            monto = float(new)
+        query = seed["query"][:m.start()] + new_txt + seed["query"][m.end():]
+        return {"query": query, "tipo": seed["tipo"], "monto": monto,
+                "categoria": seed["categoria"]}
+    # Sin dígitos: variar el número en palabras ("cinco mil" -> "32000")
+    spans = find_word_numbers(seed["query"])
+    if not spans:
         return None
-    suffix = (m.group(2) or "").lower()
-    if suffix.startswith("k"):
-        new = rng.randint(2, 900)
-        monto, new_txt = float(new * 1000), f"{new}k"
-    elif suffix.startswith("luca") or suffix == "mil":
-        new = rng.randint(1, 500)
-        monto, new_txt = float(new * 1000), f"{new} {m.group(2)}"
-    elif suffix.startswith("mil"):
-        new = rng.randint(1, 50)
-        monto, new_txt = float(new * 1_000_000), f"{new} millones"
-    else:
-        new = rng.choice(AMOUNTS)
-        monto, new_txt = float(new), f"{new}"
-    query = seed["query"][:m.start()] + new_txt + seed["query"][m.end():]
-    return {"query": query, "tipo": seed["tipo"], "monto": monto, "categoria": seed["categoria"]}
+    s, e, _ = spans[0]
+    new = rng.choice(AMOUNTS)
+    query = seed["query"][:s] + str(new) + seed["query"][e:]
+    return {"query": query, "tipo": seed["tipo"], "monto": float(new),
+            "categoria": seed["categoria"]}
 
 
 def reasoning_for(ex: dict) -> str:

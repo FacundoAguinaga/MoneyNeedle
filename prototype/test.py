@@ -1,7 +1,7 @@
 """Prototipo Fase 0: validar Needle 3 base con tools de finanzas, sin fine-tune.
 
 Uso:
-  pip install -r requirements.txt
+  uv pip install -r requirements.txt
   python test.py --phrase "gasté 5000 en supermercado ayer"
   python test.py --file ../docs/test-phrases.md  # (próximo: batch eval)
 """

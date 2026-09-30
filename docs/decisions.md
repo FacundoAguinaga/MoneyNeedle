@@ -25,3 +25,17 @@
 8. **Frases ambiguas no se etiquetan con default.** "clases 25000" sin verbo
    es ingreso o gasto según quién habla: va a confirmación manual.
    El verbo (`cobré`/`pagué`/`vendí`) es la señal que el modelo aprende.
+9. **Sacar `Transferencia` del enum Rust.** ADR 2 dice que no existe; el enum
+   la tenía por scaffold inicial. Antes de conectar core↔Flutter, limpiar.
+10. **App multiplataforma con Flutter.** Se evaluaron Flutter, KMP, Kotlin
+    nativo, React Native y Swift. Flutter gana por `flutter_rust_bridge`
+    (genera bindings Dart↔Rust automáticamente). KMP requiere FFI manual por
+    plataforma (JNI + cinterop). React Native descartado por FFI pobre.
+    Kotlin nativo descartado porque se necesita iOS. Detalle en `docs/stack.md`.
+11. **STT: nativo primero, sherpa-onnx después.** Android `SpeechRecognizer` y
+    iOS `SFSpeechRecognizer` funcionan offline con modelos descargables, sin
+    dependencias extra. Si no alcanzan, agregar sherpa-onnx via C API en Rust.
+12. **Dart es solo UI.** Toda la lógica de negocio (parsing, grounding,
+    keywords, moneda, validación, inferencia Needle) vive en Rust. Flutter
+    llama al core via `flutter_rust_bridge` y muestra resultados. Nunca
+    duplicar lógica en Dart.

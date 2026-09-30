@@ -10,7 +10,7 @@ App de finanzas personal **local-first**: el usuario escribe o dicta movimientos
 los convierte en transacciones estructuradas. 100% offline. Repo greenfield,
 dueño: Facundo. Fecha: sep-oct 2026.
 
-## Estado actual (2026-09-29)
+## Estado actual (2026-09-30)
 
 - Prototype Python funcional: `prototype/chat.py` (probador interactivo),
   `prototype/eval.py` (mide accuracy), `prototype/make_dataset.py` (genera data).
@@ -19,7 +19,26 @@ dueño: Facundo. Fecha: sep-oct 2026.
 - Probarlo: `cd prototype && .venv/bin/python chat.py --weights data/tuned2.cact`
 - La app móvil (Flutter + core Rust) está scaffoldeada (`app/`, `core/`) pero
   vacía: el trabajo hasta ahora fue validar la IA.
-- Siguiente paso sugerido: construir la app que use `tuned2.cact` (ver `docs/idea.md`).
+- Siguiente paso: construir la app con el stack definido (ver abajo y `docs/stack.md`).
+
+## Stack definido (2026-09-30)
+
+```
+Flutter (Dart)  ── solo UI, nada de lógica ──→ flutter_rust_bridge
+     ↕ platform channels (STT nativo)             ↓
+                                            Rust (moneyneedle-core)
+                                              ├─ lógica de negocio
+                                              ├─ C API Cactus Needle
+                                              └─ SQLite (rusqlite)
+```
+
+- **Flutter** para cross-platform (Android + iOS). Detalle en `docs/stack.md`.
+- **Rust core** tiene TODA la lógica: parsing, grounding, keywords, moneda,
+  validación, y bridge a Cactus Needle via C API.
+- **STT**: platform channels al STT nativo de cada OS (fase 1). sherpa-onnx
+  via C API en Rust si el nativo no alcanza (fase 2).
+- **Persistencia**: SQLite en device (reemplaza los JSONL del prototype).
+- **ADRs 9-12** en `docs/decisions.md` documentan el porqué de cada elección.
 
 ## Arquitectura del prototype
 
@@ -47,6 +66,16 @@ frase → (sacar moneda) → Needle 3 complete() → tool_call add_transaction
    frases a `dataset_es.jsonl` (verificado: 0 duplicados).
 6. Dataset sintético llegó a su techo (loss→0.000 = memoriza). Lo próximo es
    dato REAL de `corrections.jsonl` (hoy casi vacío).
+7. Dart es solo UI. Toda la lógica de negocio vive en Rust.
+
+## Deuda técnica conocida
+
+Ver `docs/tech-debt.md` para la lista completa. Los más importantes:
+- Bugs en `chat.py`: crash al editar monto, parsing de decimales roto,
+  inferencia sin try/except.
+- Cero tests unitarios para las funciones puras de Python.
+- CI no compila los archivos principales.
+- `eval.py` solo mide modelo crudo, no el pipeline con guardrails.
 
 ## Archivos que importan
 
@@ -56,6 +85,8 @@ frase → (sacar moneda) → Needle 3 complete() → tool_call add_transaction
 - `prototype/PROMPT_GENERADOR.md` (prompt para generar más frases con otra IA)
 - `docs/baseline.md` (tabla de resultados), `docs/training.md` (bitácora +
   comandos de entreno GPU), `docs/decisions.md`, `docs/idea.md`
+- `docs/stack.md` (arquitectura del stack y alternativas evaluadas)
+- `docs/tech-debt.md` (bugs conocidos, gaps de testing, deuda técnica)
 - `core/` (Rust, solo modelos+tests), `app/` (Flutter scaffold)
 
 ## Comandos

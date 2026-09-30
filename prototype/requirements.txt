@@ -1,1 +1,3 @@
+# Instalar con: uv pip install -r requirements.txt  (NO pip: no existe en esta máquina)
+# El extra [train] (JAX) solo se necesita para finetune, ver docs/training.md
 cactus-needle>=3.0.0

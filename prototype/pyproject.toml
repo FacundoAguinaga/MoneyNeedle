@@ -1,0 +1,14 @@
+[project]
+name = "moneyneedle-prototype"
+version = "0.2.0"
+description = "Prototipo MoneyNeedle: validación de Cactus Needle 3 para finanzas en español"
+requires-python = ">=3.12"
+dependencies = ["cactus-needle>=3.0.0"]
+
+[project.scripts]
+moneyneedle-chat = "chat:cli"
+moneyneedle-eval = "eval:cli"
+
+[tool.pytest.ini_options]
+testpaths = ["."]
+python_files = ["test_*.py"]

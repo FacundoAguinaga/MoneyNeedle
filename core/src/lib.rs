@@ -8,7 +8,6 @@
 pub enum TipoMovimiento {
     Gasto,
     Ingreso,
-    Transferencia,
 }
 
 #[derive(Debug, Clone, PartialEq)]
