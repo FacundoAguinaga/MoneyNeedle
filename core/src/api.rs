@@ -8,7 +8,7 @@
 //! Los DTOs usan tipos simples (String/f64/bool) para un binding estable.
 use std::sync::{Mutex, OnceLock};
 
-use crate::{needle_bridge, pipeline, TipoMovimiento};
+use crate::{needle_bridge, pipeline, store, TipoMovimiento};
 
 /// Lo que Flutter muestra en la tarjeta de confirmación.
 #[derive(Debug, Clone)]
@@ -86,6 +86,64 @@ pub fn propose_real(
         pipeline::propose(&query, &fecha_hoy, |q| needle_bridge::complete(q, 1024))
             .map_err(|e| anyhow::anyhow!("propose: {e:?}"))?;
     Ok(ProposalDto::from(proposal))
+}
+
+/// Movimiento guardado, listo para la lista de la UI.
+#[derive(Debug, Clone)]
+pub struct MovementDto {
+    pub id: i64,
+    pub tipo: String,
+    pub monto: f64,
+    pub moneda: String,
+    pub categoria: String,
+    pub descripcion: String,
+    pub fecha: String,
+}
+
+impl From<store::Movement> for MovementDto {
+    fn from(m: store::Movement) -> Self {
+        MovementDto {
+            id: m.id,
+            tipo: m.tipo,
+            monto: m.monto,
+            moneda: m.moneda,
+            categoria: m.categoria,
+            descripcion: m.descripcion,
+            fecha: m.fecha,
+        }
+    }
+}
+
+/// Guarda la propuesta confirmada. `db_path` = archivo SQLite en la app.
+#[allow(clippy::too_many_arguments)]
+pub fn confirm_movement(
+    db_path: String,
+    tipo: String,
+    monto: f64,
+    moneda: String,
+    categoria: String,
+    descripcion: String,
+    fecha: String,
+    frase: String,
+) -> anyhow::Result<i64> {
+    let t = match tipo.as_str() {
+        "gasto" => TipoMovimiento::Gasto,
+        "ingreso" => TipoMovimiento::Ingreso,
+        other => anyhow::bail!("tipo inválido: {other}"),
+    };
+    let conn = store::open(&db_path).map_err(|e| anyhow::anyhow!("{e}"))?;
+    store::insert(&conn, &t, monto, &moneda, &categoria, &descripcion, &fecha, &frase)
+        .map_err(|e| anyhow::anyhow!("{e}"))
+}
+
+/// Últimos movimientos para la lista.
+pub fn list_movements(db_path: String, limit: i64) -> anyhow::Result<Vec<MovementDto>> {
+    let conn = store::open(&db_path).map_err(|e| anyhow::anyhow!("{e}"))?;
+    Ok(store::list(&conn, limit)
+        .map_err(|e| anyhow::anyhow!("{e}"))?
+        .into_iter()
+        .map(MovementDto::from)
+        .collect())
 }
 
 #[cfg(test)]

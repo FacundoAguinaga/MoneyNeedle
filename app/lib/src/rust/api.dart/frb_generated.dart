@@ -68,7 +68,7 @@ class RustLib extends BaseEntrypoint<RustLibApi, RustLibApiImpl, RustLibWire> {
   String get codegenVersion => '2.13.0';
 
   @override
-  int get rustContentHash => 7901877;
+  int get rustContentHash => 487646629;
 
   static const kDefaultExternalLibraryLoaderConfig =
       ExternalLibraryLoaderConfig(
@@ -80,6 +80,19 @@ class RustLib extends BaseEntrypoint<RustLibApi, RustLibApiImpl, RustLibWire> {
 }
 
 abstract class RustLibApi extends BaseApi {
+  Future<PlatformInt64> crateApiConfirmMovement(
+      {required String dbPath,
+      required String tipo,
+      required double monto,
+      required String moneda,
+      required String categoria,
+      required String descripcion,
+      required String fecha,
+      required String frase});
+
+  Future<List<MovementDto>> crateApiListMovements(
+      {required String dbPath, required PlatformInt64 limit});
+
   Future<ProposalDto> crateApiProposeMocked(
       {required String query, required String fechaHoy});
 
@@ -98,6 +111,89 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   });
 
   @override
+  Future<PlatformInt64> crateApiConfirmMovement(
+      {required String dbPath,
+      required String tipo,
+      required double monto,
+      required String moneda,
+      required String categoria,
+      required String descripcion,
+      required String fecha,
+      required String frase}) {
+    return handler.executeNormal(NormalTask(
+      callFfi: (port_) {
+        final serializer = SseSerializer(generalizedFrbRustBinding);
+        sse_encode_String(dbPath, serializer);
+        sse_encode_String(tipo, serializer);
+        sse_encode_f_64(monto, serializer);
+        sse_encode_String(moneda, serializer);
+        sse_encode_String(categoria, serializer);
+        sse_encode_String(descripcion, serializer);
+        sse_encode_String(fecha, serializer);
+        sse_encode_String(frase, serializer);
+        pdeCallFfi(generalizedFrbRustBinding, serializer,
+            funcId: 1, port: port_);
+      },
+      codec: SseCodec(
+        decodeSuccessData: sse_decode_i_64,
+        decodeErrorData: sse_decode_AnyhowException,
+      ),
+      constMeta: kCrateApiConfirmMovementConstMeta,
+      argValues: [
+        dbPath,
+        tipo,
+        monto,
+        moneda,
+        categoria,
+        descripcion,
+        fecha,
+        frase
+      ],
+      apiImpl: this,
+    ));
+  }
+
+  TaskConstMeta get kCrateApiConfirmMovementConstMeta => const TaskConstMeta(
+        debugName: "confirm_movement",
+        argNames: [
+          "dbPath",
+          "tipo",
+          "monto",
+          "moneda",
+          "categoria",
+          "descripcion",
+          "fecha",
+          "frase"
+        ],
+      );
+
+  @override
+  Future<List<MovementDto>> crateApiListMovements(
+      {required String dbPath, required PlatformInt64 limit}) {
+    return handler.executeNormal(NormalTask(
+      callFfi: (port_) {
+        final serializer = SseSerializer(generalizedFrbRustBinding);
+        sse_encode_String(dbPath, serializer);
+        sse_encode_i_64(limit, serializer);
+        pdeCallFfi(generalizedFrbRustBinding, serializer,
+            funcId: 2, port: port_);
+      },
+      codec: SseCodec(
+        decodeSuccessData: sse_decode_list_movement_dto,
+        decodeErrorData: sse_decode_AnyhowException,
+      ),
+      constMeta: kCrateApiListMovementsConstMeta,
+      argValues: [dbPath, limit],
+      apiImpl: this,
+    ));
+  }
+
+  TaskConstMeta get kCrateApiListMovementsConstMeta => const TaskConstMeta(
+        debugName: "list_movements",
+        argNames: ["dbPath", "limit"],
+      );
+
+  @override
   Future<ProposalDto> crateApiProposeMocked(
       {required String query, required String fechaHoy}) {
     return handler.executeNormal(NormalTask(
@@ -106,7 +202,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         sse_encode_String(query, serializer);
         sse_encode_String(fechaHoy, serializer);
         pdeCallFfi(generalizedFrbRustBinding, serializer,
-            funcId: 1, port: port_);
+            funcId: 3, port: port_);
       },
       codec: SseCodec(
         decodeSuccessData: sse_decode_proposal_dto,
@@ -135,7 +231,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         sse_encode_String(fechaHoy, serializer);
         sse_encode_String(cactPath, serializer);
         pdeCallFfi(generalizedFrbRustBinding, serializer,
-            funcId: 2, port: port_);
+            funcId: 4, port: port_);
       },
       codec: SseCodec(
         decodeSuccessData: sse_decode_proposal_dto,
@@ -177,9 +273,38 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  PlatformInt64 dco_decode_i_64(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return dcoDecodeI64(raw);
+  }
+
+  @protected
+  List<MovementDto> dco_decode_list_movement_dto(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return (raw as List<dynamic>).map(dco_decode_movement_dto).toList();
+  }
+
+  @protected
   Uint8List dco_decode_list_prim_u_8_strict(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return raw as Uint8List;
+  }
+
+  @protected
+  MovementDto dco_decode_movement_dto(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 7)
+      throw Exception('unexpected arr length: expect 7 but see ${arr.length}');
+    return MovementDto(
+      id: dco_decode_i_64(arr[0]),
+      tipo: dco_decode_String(arr[1]),
+      monto: dco_decode_f_64(arr[2]),
+      moneda: dco_decode_String(arr[3]),
+      categoria: dco_decode_String(arr[4]),
+      descripcion: dco_decode_String(arr[5]),
+      fecha: dco_decode_String(arr[6]),
+    );
   }
 
   @protected
@@ -237,10 +362,48 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  PlatformInt64 sse_decode_i_64(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return deserializer.buffer.getPlatformInt64();
+  }
+
+  @protected
+  List<MovementDto> sse_decode_list_movement_dto(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var len_ = sse_decode_i_32(deserializer);
+    var ans_ = <MovementDto>[];
+    for (var idx_ = 0; idx_ < len_; ++idx_) {
+      ans_.add(sse_decode_movement_dto(deserializer));
+    }
+    return ans_;
+  }
+
+  @protected
   Uint8List sse_decode_list_prim_u_8_strict(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     var len_ = sse_decode_i_32(deserializer);
     return deserializer.buffer.getUint8List(len_);
+  }
+
+  @protected
+  MovementDto sse_decode_movement_dto(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_id = sse_decode_i_64(deserializer);
+    var var_tipo = sse_decode_String(deserializer);
+    var var_monto = sse_decode_f_64(deserializer);
+    var var_moneda = sse_decode_String(deserializer);
+    var var_categoria = sse_decode_String(deserializer);
+    var var_descripcion = sse_decode_String(deserializer);
+    var var_fecha = sse_decode_String(deserializer);
+    return MovementDto(
+        id: var_id,
+        tipo: var_tipo,
+        monto: var_monto,
+        moneda: var_moneda,
+        categoria: var_categoria,
+        descripcion: var_descripcion,
+        fecha: var_fecha);
   }
 
   @protected
@@ -304,11 +467,39 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  void sse_encode_i_64(PlatformInt64 self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    serializer.buffer.putPlatformInt64(self);
+  }
+
+  @protected
+  void sse_encode_list_movement_dto(
+      List<MovementDto> self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    for (final item in self) {
+      sse_encode_movement_dto(item, serializer);
+    }
+  }
+
+  @protected
   void sse_encode_list_prim_u_8_strict(
       Uint8List self, SseSerializer serializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_i_32(self.length, serializer);
     serializer.buffer.putUint8List(self);
+  }
+
+  @protected
+  void sse_encode_movement_dto(MovementDto self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_64(self.id, serializer);
+    sse_encode_String(self.tipo, serializer);
+    sse_encode_f_64(self.monto, serializer);
+    sse_encode_String(self.moneda, serializer);
+    sse_encode_String(self.categoria, serializer);
+    sse_encode_String(self.descripcion, serializer);
+    sse_encode_String(self.fecha, serializer);
   }
 
   @protected

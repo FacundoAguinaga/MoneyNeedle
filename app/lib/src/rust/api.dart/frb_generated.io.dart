@@ -31,7 +31,16 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   double dco_decode_f_64(dynamic raw);
 
   @protected
+  PlatformInt64 dco_decode_i_64(dynamic raw);
+
+  @protected
+  List<MovementDto> dco_decode_list_movement_dto(dynamic raw);
+
+  @protected
   Uint8List dco_decode_list_prim_u_8_strict(dynamic raw);
+
+  @protected
+  MovementDto dco_decode_movement_dto(dynamic raw);
 
   @protected
   ProposalDto dco_decode_proposal_dto(dynamic raw);
@@ -55,7 +64,16 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   double sse_decode_f_64(SseDeserializer deserializer);
 
   @protected
+  PlatformInt64 sse_decode_i_64(SseDeserializer deserializer);
+
+  @protected
+  List<MovementDto> sse_decode_list_movement_dto(SseDeserializer deserializer);
+
+  @protected
   Uint8List sse_decode_list_prim_u_8_strict(SseDeserializer deserializer);
+
+  @protected
+  MovementDto sse_decode_movement_dto(SseDeserializer deserializer);
 
   @protected
   ProposalDto sse_decode_proposal_dto(SseDeserializer deserializer);
@@ -83,8 +101,18 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_encode_f_64(double self, SseSerializer serializer);
 
   @protected
+  void sse_encode_i_64(PlatformInt64 self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_list_movement_dto(
+      List<MovementDto> self, SseSerializer serializer);
+
+  @protected
   void sse_encode_list_prim_u_8_strict(
       Uint8List self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_movement_dto(MovementDto self, SseSerializer serializer);
 
   @protected
   void sse_encode_proposal_dto(ProposalDto self, SseSerializer serializer);
