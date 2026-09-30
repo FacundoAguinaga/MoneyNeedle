@@ -104,9 +104,10 @@ class _HomePageState extends State<HomePage> {
               ? 'Mic bloqueado: activalo en Ajustes → Apps → MoneyNeedle'
               : 'Sin micrófono no puedo escucharte'),
           action: bloqueado
+              // ignore: prefer_const_constructors
               ? SnackBarAction(
                   label: 'Ajustes', onPressed: openAppSettings)
-              : null, // ignore: prefer_const_constructors
+              : null,
         ),
       );
       return;
