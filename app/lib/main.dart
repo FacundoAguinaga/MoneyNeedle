@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'src/rust/api.dart/api.dart';
 import 'src/rust/api.dart/frb_generated.dart';
 
@@ -38,9 +39,11 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
+  static const _stt = MethodChannel('moneyneedle/stt');
   final _controller = TextEditingController();
   PendingProposal? _pending;
   final List<String> _movimientos = [];
+  bool _escuchando = false;
 
   Future<void> _proponer() async {
     final texto = _controller.text.trim();
@@ -85,6 +88,34 @@ class _HomePageState extends State<HomePage> {
     return f.path;
   }
 
+  /// Voz → texto → propuesta. Pide permiso de mic si hace falta.
+  Future<void> _escuchar() async {
+    if (_escuchando) return;
+    final permiso = await Permission.microphone.request();
+    if (!permiso.isGranted) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Sin micrófono no puedo escucharte')),
+      );
+      return;
+    }
+    setState(() => _escuchando = true);
+    try {
+      final texto = await _stt.invokeMethod<String>('listen');
+      if (texto != null && texto.trim().isNotEmpty && mounted) {
+        _controller.text = texto.trim();
+        await _proponer();
+      }
+    } on PlatformException catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('No te entendí (${e.code}). Probá de nuevo.')),
+      );
+    } finally {
+      if (mounted) setState(() => _escuchando = false);
+    }
+  }
+
   void _confirmar() {
     setState(() {
       _movimientos.add(_pending!.texto);
@@ -115,9 +146,9 @@ class _HomePageState extends State<HomePage> {
                 ),
                 const SizedBox(width: 8),
                 IconButton(
-                  icon: const Icon(Icons.mic),
-                  // TODO: STT local sherpa-onnx
-                  onPressed: () {},
+                  icon: Icon(_escuchando ? Icons.graphic_eq : Icons.mic),
+                  // STT nativo (offline-first) → texto → propuesta automática.
+                  onPressed: _escuchar,
                 ),
                 const SizedBox(width: 4),
                 FilledButton(onPressed: _proponer, child: const Text('OK')),
