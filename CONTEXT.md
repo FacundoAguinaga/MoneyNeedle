@@ -10,15 +10,15 @@ App de finanzas personal **local-first**: el usuario escribe o dicta movimientos
 los convierte en transacciones estructuradas. 100% offline. Repo greenfield,
 dueño: Facundo. Fecha: sep-oct 2026.
 
-## Estado actual (2026-09-30)
+## Estado actual (2026-09-30, noche)
 
-- Prototype Python funcional: `prototype/chat.py` (probador interactivo),
-  `prototype/eval.py` (mide accuracy), `prototype/make_dataset.py` (genera data).
-- Modelo actual: `prototype/data/tuned2.cact` (NO versionado, 63MB) —
-  **48% exacto en 50 frases nunca vistas** (base: 16%).
-- Probarlo: `cd prototype && .venv/bin/python chat.py --weights data/tuned2.cact`
-- La app móvil (Flutter + core Rust) está scaffoldeada (`app/`, `core/`) pero
-  vacía: el trabajo hasta ahora fue validar la IA.
+- **App Android funcional en hardware**: voz/texto → tuned2 on-device →
+  confirmar → SQLite. Instalada (debug) en el teléfono de Facundo.
+- Prototype Python: `chat.py`, `eval.py`, `make_dataset.py` (sigue para
+  entrenar y medir; el chat Rust se descartó a propósito).
+- Modelo: `tuned2.cact` (48% exacto held-out). Corre en el teléfono a
+  ~1248 tps prefill / 303 decode, 129MB RAM.
+- `main` al día (PRs #2-#5). Ramas de features borradas tras mergear.
 - Siguiente paso: construir la app con el stack definido (ver abajo y `docs/stack.md`).
 
 ## Stack definido (2026-09-30)

@@ -1,4 +1,40 @@
-# Bitácora de entrenamiento
+# Bitácora de entrenamiento y build Android
+
+## Build Android (verificado 2026-09-30)
+
+Toolchain: NDK r28c (`~/Android/Sdk/ndk/28.2.13676358`), target
+`aarch64-linux-android`, `cargo-ndk`, JDK 21 portable (`~/jdk21`,
+el Java 26 del sistema rompe AGP), `compileSdk = 37`
+(`permission_handler` lo exige), plataforma android-35 para el
+transform de un plugin.
+
+```fish
+# .so arm64 con engine (desde core/)
+export ANDROID_NDK_HOME=$HOME/Android/Sdk/ndk/28.2.13676358
+NEEDLE_LIB_DIR=/tmp/needle-android cargo ndk -t arm64-v8a build --release
+cp target/aarch64-linux-android/release/libmoneyneedle_core.so \
+   ../app/android/app/src/main/jniLibs/arm64-v8a/
+# engine android: needle build --lora data/adapter2.safetensors \
+#   --platform android-arm64 --out /tmp/needle-android
+# .cact como asset: app/assets/models/tuned2.cact (gitignored)
+export JAVA_HOME=$HOME/jdk21
+fvm flutter build apk --debug
+adb install -r build/app/outputs/flutter-apk/app-debug.apk
+```
+
+Lecciones (cada una costó un crash real):
+
+- `build.rs` pasa `libc++_shared.so` del NDK **por ruta completa**, nunca
+  por `-L`: si el dir del sysroot entra al search path, el linker pesca
+  objetos de `libc.a` estática (un `getauxval` incompatible → SIGSEGV
+  en `dlopen`, verificado por disassembly + `llvm-nm`).
+- Tras CADA cambio del core, recompilar el `.so` arm64: si no, FRB frena
+  el arranque (content-hash mismatch = pantalla negra).
+- Debug: `adb logcat -c` + lanzar + `grep -E "Unhandled|Fatal signal"`;
+  backtrace nativo se decodifica con `llvm-addr2line` del NDK.
+- Gradle cachea agresivo el merge de jniLibs: ante duda, `rm -rf build`.
+
+## Entrenamiento (2026-09-29)
 
 Cómo se pasó de 16% a 48% exacto en frases no vistas, con comandos
 reproducibles. Modelos: `data/tuned.cact` (v1), `data/tuned2.cact` (v2, actual).

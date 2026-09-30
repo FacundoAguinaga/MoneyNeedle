@@ -74,3 +74,13 @@ Leé `CONTEXT.md` primero. Acá van las reglas que salieron de romper cosas.
   si se toca el prototype. `cargo test` debe pasar si se toca `core/`.
 - No crear archivos innecesarios; preferir editar los existentes.
 
+## Flutter y Android
+
+- Flutter vía `fvm` (pinneado en `.fvmrc`): `fvm flutter ...`, nunca el
+  flutter del sistema. `fvm flutter analyze` debe estar limpio.
+- Tras cambiar `core/`: recompilar el `.so` arm64 y copiarlo a
+  `app/android/app/src/main/jniLibs/arm64-v8a/` (si no, pantalla negra).
+  Regenerar bindings si cambia `api.rs`: `flutter_rust_bridge_codegen generate`.
+- JDK 21 (`~/jdk21`) para Gradle; Java 26 del sistema no sirve.
+- No commitear: `app/build/`, `jniLibs/`, `app/assets/models/`, `.fvm/`.
+
