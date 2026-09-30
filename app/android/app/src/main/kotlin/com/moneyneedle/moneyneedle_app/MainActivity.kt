@@ -17,6 +17,7 @@ class MainActivity : FlutterActivity() {
     private val channel = "moneyneedle/stt"
     private var recognizer: SpeechRecognizer? = null
     private var pending: MethodChannel.Result? = null
+    private var triedOnlineFallback = false
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
@@ -40,14 +41,24 @@ class MainActivity : FlutterActivity() {
             result.error("NO_ENGINE", "sin motor de reconocimiento en el device", null)
             return
         }
-        val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
+        val intent = buildIntent(offline = true)
+        triedOnlineFallback = false
+        pending = result
+        startRecognizer(intent)
+    }
+
+    private fun buildIntent(offline: Boolean): Intent {
+        // Sin EXTRA_LANGUAGE: usa el locale del sistema (más compatible que
+        // forzar "es-AR", que falla si no está el pack offline instalado).
+        return Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
             putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
-            putExtra(RecognizerIntent.EXTRA_LANGUAGE, "es-AR")
-            putExtra(RecognizerIntent.EXTRA_PREFER_OFFLINE, true)
+            putExtra(RecognizerIntent.EXTRA_PREFER_OFFLINE, offline)
             putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, false)
             putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 1)
         }
-        pending = result
+    }
+
+    private fun startRecognizer(intent: Intent) {
         recognizer = SpeechRecognizer.createSpeechRecognizer(this).apply {
             setRecognitionListener(object : RecognitionListener {
                 override fun onResults(b: Bundle?) {
@@ -60,7 +71,15 @@ class MainActivity : FlutterActivity() {
                     cleanup()
                 }
                 override fun onError(code: Int) {
-                    // 6=silencio, 7=sin match, 8=ocupado, 13=sin permiso.
+                    // 12/13 = idioma/pack offline no disponible: reintentar
+                    // online una vez antes de rendirse. 6=silencio, 7=sin
+                    // match, 8=ocupado, 9=sin permiso.
+                    if ((code == 12 || code == 13 || code == 2) && !triedOnlineFallback) {
+                        triedOnlineFallback = true
+                        cleanupRecognizer()
+                        startRecognizer(buildIntent(offline = false))
+                        return
+                    }
                     pending?.error("STT_$code", "falló el reconocimiento: $code", null)
                     cleanup()
                 }
@@ -83,13 +102,18 @@ class MainActivity : FlutterActivity() {
         }
     }
 
-    private fun cleanup() {
-        pending = null
+    private fun cleanupRecognizer() {
         try {
             recognizer?.destroy()
         } catch (_: Exception) {
         }
         recognizer = null
+    }
+
+    private fun cleanup() {
+        pending = null
+        triedOnlineFallback = false
+        cleanupRecognizer()
     }
 
     override fun onDestroy() {

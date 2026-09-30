@@ -91,11 +91,23 @@ class _HomePageState extends State<HomePage> {
   /// Voz → texto → propuesta. Pide permiso de mic si hace falta.
   Future<void> _escuchar() async {
     if (_escuchando) return;
-    final permiso = await Permission.microphone.request();
+    var permiso = await Permission.microphone.status;
+    if (!permiso.isGranted) {
+      permiso = await Permission.microphone.request();
+    }
     if (!permiso.isGranted) {
       if (!mounted) return;
+      final bloqueado = permiso.isPermanentlyDenied;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Sin micrófono no puedo escucharte')),
+        SnackBar(
+          content: Text(bloqueado
+              ? 'Mic bloqueado: activalo en Ajustes → Apps → MoneyNeedle'
+              : 'Sin micrófono no puedo escucharte'),
+          action: bloqueado
+              ? SnackBarAction(
+                  label: 'Ajustes', onPressed: openAppSettings)
+              : null, // ignore: prefer_const_constructors
+        ),
       );
       return;
     }
