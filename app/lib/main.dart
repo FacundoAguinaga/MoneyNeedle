@@ -28,8 +28,12 @@ class MoneyNeedleApp extends StatelessWidget {
 
 class PendingProposal {
   final String texto;
-  final String resumenIA;
-  PendingProposal(this.texto, this.resumenIA);
+  final ProposalDto propuesta;
+  PendingProposal(this.texto, this.propuesta);
+
+  String get resumen =>
+      'IA propone: ${propuesta.tipo} \$${propuesta.monto.toStringAsFixed(0)} '
+      '[${propuesta.categoria}] grounded=${propuesta.grounded ? "sí" : "NO"}';
 }
 
 class HomePage extends StatefulWidget {
@@ -42,8 +46,29 @@ class _HomePageState extends State<HomePage> {
   static const _stt = MethodChannel('moneyneedle/stt');
   final _controller = TextEditingController();
   PendingProposal? _pending;
-  final List<String> _movimientos = [];
+  List<MovementDto> _movimientos = [];
   bool _escuchando = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _recargar();
+  }
+
+  Future<String> _dbPath() async {
+    final dir = await getApplicationDocumentsDirectory();
+    return '${dir.path}/moneyneedle.db';
+  }
+
+  Future<void> _recargar() async {
+    try {
+      final movs = await listMovements(dbPath: await _dbPath(), limit: 50);
+      if (!mounted) return;
+      setState(() => _movimientos = movs);
+    } catch (_) {
+      // DB aún no creada: lista vacía.
+    }
+  }
 
   Future<void> _proponer() async {
     final texto = _controller.text.trim();
@@ -63,16 +88,13 @@ class _HomePageState extends State<HomePage> {
         p = await proposeMocked(query: texto, fechaHoy: fecha);
       }
       setState(() {
-        _pending = PendingProposal(
-          texto,
-          'IA propone: ${p.tipo} \$${p.monto.toStringAsFixed(0)} '
-          '[${p.categoria}] grounded=${p.grounded ? "sí" : "NO"}',
-        );
+        _pending = PendingProposal(texto, p);
       });
     } catch (e) {
-      setState(() {
-        _pending = PendingProposal(texto, 'Error del core: $e');
-      });
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error del core: $e')),
+      );
     }
   }
 
@@ -129,12 +151,29 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
-  void _confirmar() {
-    setState(() {
-      _movimientos.add(_pending!.texto);
-      _pending = null;
+  Future<void> _confirmar() async {
+    final pend = _pending;
+    if (pend == null) return;
+    setState(() => _pending = null);
+    try {
+      await confirmMovement(
+        dbPath: await _dbPath(),
+        tipo: pend.propuesta.tipo,
+        monto: pend.propuesta.monto,
+        moneda: pend.propuesta.moneda,
+        categoria: pend.propuesta.categoria,
+        descripcion: pend.texto,
+        fecha: pend.propuesta.fecha,
+        frase: pend.texto,
+      );
       _controller.clear();
-    });
+      await _recargar();
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('No se pudo guardar: $e')),
+      );
+    }
   }
 
   @override
@@ -170,7 +209,7 @@ class _HomePageState extends State<HomePage> {
             if (_pending != null)
               Card(
                 child: ListTile(
-                  title: Text(_pending!.resumenIA),
+                  title: Text(_pending!.resumen),
                   subtitle: Text(_pending!.texto),
                   trailing: Row(
                     mainAxisSize: MainAxisSize.min,
@@ -191,10 +230,17 @@ class _HomePageState extends State<HomePage> {
             Expanded(
               child: ListView.builder(
                 itemCount: _movimientos.length,
-                itemBuilder: (c, i) => ListTile(
-                  leading: const Icon(Icons.receipt),
-                  title: Text(_movimientos[i]),
-                ),
+                itemBuilder: (c, i) {
+                  final m = _movimientos[i];
+                  return ListTile(
+                    leading: Icon(m.tipo == 'gasto'
+                        ? Icons.arrow_upward
+                        : Icons.arrow_downward),
+                    title: Text(
+                        '${m.tipo} \$${m.monto.toStringAsFixed(0)} ${m.moneda}'),
+                    subtitle: Text('${m.categoria} · ${m.fecha}'),
+                  );
+                },
               ),
             ),
           ],

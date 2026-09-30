@@ -8,7 +8,7 @@ import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
 // These functions are ignored because they are not marked as `pub`: `engine`
 // These types are ignored because they are neither used by any `pub` functions nor (for structs and enums) marked `#[frb(unignore)]`: `Engine`
-// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `clone`, `fmt`, `from`
+// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `clone`, `clone`, `fmt`, `fmt`, `from`, `from`
 
 /// Pipeline con inferencia mockeada: verifica el cableado sin modelo.
 Future<ProposalDto> proposeMocked(
@@ -23,6 +23,75 @@ Future<ProposalDto> proposeReal(
         required String cactPath}) =>
     RustLib.instance.api.crateApiProposeReal(
         query: query, fechaHoy: fechaHoy, cactPath: cactPath);
+
+/// Guarda la propuesta confirmada. `db_path` = archivo SQLite en la app.
+Future<PlatformInt64> confirmMovement(
+        {required String dbPath,
+        required String tipo,
+        required double monto,
+        required String moneda,
+        required String categoria,
+        required String descripcion,
+        required String fecha,
+        required String frase}) =>
+    RustLib.instance.api.crateApiConfirmMovement(
+        dbPath: dbPath,
+        tipo: tipo,
+        monto: monto,
+        moneda: moneda,
+        categoria: categoria,
+        descripcion: descripcion,
+        fecha: fecha,
+        frase: frase);
+
+/// Últimos movimientos para la lista.
+Future<List<MovementDto>> listMovements(
+        {required String dbPath, required PlatformInt64 limit}) =>
+    RustLib.instance.api.crateApiListMovements(dbPath: dbPath, limit: limit);
+
+/// Movimiento guardado, listo para la lista de la UI.
+class MovementDto {
+  final PlatformInt64 id;
+  final String tipo;
+  final double monto;
+  final String moneda;
+  final String categoria;
+  final String descripcion;
+  final String fecha;
+
+  const MovementDto({
+    required this.id,
+    required this.tipo,
+    required this.monto,
+    required this.moneda,
+    required this.categoria,
+    required this.descripcion,
+    required this.fecha,
+  });
+
+  @override
+  int get hashCode =>
+      id.hashCode ^
+      tipo.hashCode ^
+      monto.hashCode ^
+      moneda.hashCode ^
+      categoria.hashCode ^
+      descripcion.hashCode ^
+      fecha.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is MovementDto &&
+          runtimeType == other.runtimeType &&
+          id == other.id &&
+          tipo == other.tipo &&
+          monto == other.monto &&
+          moneda == other.moneda &&
+          categoria == other.categoria &&
+          descripcion == other.descripcion &&
+          fecha == other.fecha;
+}
 
 /// Lo que Flutter muestra en la tarjeta de confirmación.
 class ProposalDto {
