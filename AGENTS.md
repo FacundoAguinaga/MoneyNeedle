@@ -49,11 +49,28 @@ Leé `CONTEXT.md` primero. Acá van las reglas que salieron de romper cosas.
   (si no, el timeout mata el proceso).
 - Compilación JAX tarda minutos; es normal. Mirar progreso con `tail`.
 
+## Git y flujo de trabajo (profesional)
+
+- **`main` es estable y sagrada**: prohibido commitear o pushear directo a `main`
+  para cambios sustanciales, features o refactors.
+- **Ramas de trabajo**: crear ramas descriptivas a partir de `main`:
+  `feat/<nombre>`, `fix/<nombre>`, `chore/<nombre>`, `docs/<nombre>`.
+- **Commits profesionales**:
+  - Atómicos y autocontenidos (un cambio lógico por commit).
+  - Conventional Commits (`feat:`, `fix:`, `refactor:`, `test:`, `docs:`, `chore:`).
+  - Mensajes concisos en español o inglés técnico, explicando el *qué* y el *por qué*
+    si no es obvio. Cero commits tipo "wip", "cambios", "fix test".
+- **Calidad antes de mergear/PR**:
+  - `cargo test` debe compilar y pasar sin errores ni warnings críticos si se tocó `core/`.
+  - `.venv/bin/python -m unittest` debe pasar si se tocó `prototype/`.
+  - Prohibido dejar archivos temporales, dumps de debug o archivos sin trackear no deseados.
+- **Siempre preguntar al usuario antes de pushear a remoto o mergear a `main`**.
+
 ## Código
 
 - Prototype primero: validar en Python antes de portar a `core/` (Rust).
-- Commits chicos, estilo conventional (`feat:`, `fix:`, `data:`, `docs:`).
 - Lógica pura de `prototype/` vive en `mn_parse.py` y lleva tests en
   `test_mn_parse.py` (`python -m unittest`). Correrlos antes de commitear
   si se toca el prototype. `cargo test` debe pasar si se toca `core/`.
 - No crear archivos innecesarios; preferir editar los existentes.
+
