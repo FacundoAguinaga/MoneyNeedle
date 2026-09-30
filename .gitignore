@@ -38,3 +38,6 @@ prototype/data/
 .idea/
 .vscode/
 *.log
+
+# FVM Version Cache
+.fvm/
