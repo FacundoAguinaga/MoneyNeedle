@@ -15,3 +15,10 @@ needle-engine = []
 [[example]]
 name = "needle_smoke"
 required-features = ["needle-engine"]
+
+[[example]]
+name = "pipeline_probe"
+required-features = ["needle-engine"]
+
+[dependencies]
+serde_json = "1.0.151"
