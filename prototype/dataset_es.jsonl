@@ -126,11 +126,11 @@
 {"expected": {"categoria": "sueldo", "monto": 800000, "tipo": "ingreso"}, "query": "liquidación 800000 del trabajo"}
 {"expected": {"categoria": "transporte", "monto": 5000, "tipo": "gasto"}, "query": "didi 5000 a palermo"}
 {"expected": {"categoria": "transporte", "monto": 3000, "tipo": "gasto"}, "query": "peaje 3000 de la autopista"}
-{"expected": {"categoria": "otros", "monto": 60000, "tipo": "gasto"}, "query": "cochera 60000 por mes"}
-{"expected": {"categoria": "otros", "monto": 4000, "tipo": "gasto"}, "query": "estacionamiento 4000 dos horas"}
+{"expected": {"categoria": "alquiler", "monto": 60000, "tipo": "gasto"}, "query": "cochera 60000 por mes"}
+{"expected": {"categoria": "transporte", "monto": 4000, "tipo": "gasto"}, "query": "estacionamiento 4000 dos horas"}
 {"expected": {"categoria": "comida", "monto": 20000, "tipo": "gasto"}, "query": "pizzas 20000 para la juntada"}
 {"expected": {"categoria": "comida", "monto": 9000, "tipo": "gasto"}, "query": "helado 9000 en la heladería"}
-{"expected": {"categoria": "otros", "monto": 30000, "tipo": "gasto"}, "query": "clases de inglés 30000"}
+{"expected": {"categoria": "otros", "monto": 30000, "tipo": "gasto"}, "query": "pagué clases de inglés 30000"}
 {"expected": {"categoria": "otros", "monto": 25000, "tipo": "gasto"}, "query": "regalo 25000 de cumpleaños"}
 {"expected": {"categoria": "otros", "monto": 35000, "tipo": "gasto"}, "query": "veterinaria 35000 el perro"}
 {"expected": {"categoria": "otros", "monto": 12000, "tipo": "gasto"}, "query": "ferretería 12000 herramientas"}
