@@ -1,6 +1,12 @@
 import 'package:flutter/material.dart';
+import 'src/rust/api.dart/api.dart';
+import 'src/rust/api.dart/frb_generated.dart';
 
-void main() => runApp(const MoneyNeedleApp());
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await RustLib.init();
+  runApp(const MoneyNeedleApp());
+}
 
 class MoneyNeedleApp extends StatelessWidget {
   const MoneyNeedleApp({super.key});
@@ -32,17 +38,28 @@ class _HomePageState extends State<HomePage> {
   PendingProposal? _pending;
   final List<String> _movimientos = [];
 
-  void _proponer() {
+  Future<void> _proponer() async {
     final texto = _controller.text.trim();
     if (texto.isEmpty) return;
-    // TODO Fase 1: llamar a core Rust -> Needle 3 (.cact) y parsear tool_call real.
-    // Hoy: mock para validar UX de confirmación.
-    setState(() {
-      _pending = PendingProposal(
-        texto,
-        'IA propone: gasto \$? en "otros" (mock, conectar Needle)',
+    // Cableado Dart→Rust verificado con el mock (sin modelo).
+    // proposeReal(query, fecha, cactPath) cuando el .cact esté bunddeado.
+    try {
+      final p = await proposeMocked(
+        query: texto,
+        fechaHoy: DateTime.now().toIso8601String().substring(0, 10),
       );
-    });
+      setState(() {
+        _pending = PendingProposal(
+          texto,
+          'IA propone: ${p.tipo} \$${p.monto.toStringAsFixed(0)} '
+          '[${p.categoria}] grounded=${p.grounded ? "sí" : "NO"}',
+        );
+      });
+    } catch (e) {
+      setState(() {
+        _pending = PendingProposal(texto, 'Error del core: $e');
+      });
+    }
   }
 
   void _confirmar() {

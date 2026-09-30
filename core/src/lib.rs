@@ -5,9 +5,13 @@
 //! - Futuro: rusqlite (persistencia), needle-bridge (C API .cact),
 //!   stt-bridge (sherpa-onnx).
 
+/* AUTO INJECTED BY flutter_rust_bridge. */
+mod frb_generated;
+
 pub mod parse;
 pub mod needle_bridge;
 pub mod pipeline;
+pub mod api;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum TipoMovimiento {

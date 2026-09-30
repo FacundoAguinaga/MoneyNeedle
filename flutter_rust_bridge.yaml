@@ -1,0 +1,8 @@
+# Config de codegen flutter_rust_bridge v2.
+# Generar con: flutter_rust_bridge_codegen generate
+rust_input: crate::api
+rust_root: core/
+dart_output: app/lib/src/rust/api.dart
+c_output: app/ios/Runner/frb.h
+rust_output: core/src/frb_generated.rs
+dart_root: app/
