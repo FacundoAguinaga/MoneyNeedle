@@ -5,7 +5,12 @@ App de finanzas personal **local-first** con IA on-device.
 El usuario **escribe o habla** sus movimientos ("gasté 5000 en súper ayer") y **Cactus Needle 3** los convierte en transacciones estructuradas, 100% offline.
 
 ## Estado
-Fase 0 — scaffolding. Sin fine-tune todavía: primero se valida el modelo base con buenos tools.
+Ronda 2 de fine-tune (2026-09-29): **48% exacto en 50 frases no vistas**
+(base: 16%). Modelo actual: `prototype/data/tuned2.cact` (no versionado).
+Probarlo: `cd prototype && .venv/bin/python chat.py --weights data/tuned2.cact`.
+
+Ver `docs/baseline.md` (resultados), `docs/training.md` (bitácora y comandos),
+`docs/decisions.md` (decisiones de diseño).
 
 ## Arquitectura
 
