@@ -19,6 +19,22 @@ generalización con frases nuevas no vistas. Errores que quedan: confusión
 salud↔servicios (luz/gas→salud), "N lucas" a veces x10 de más
 ("50 lucas"→100000), supermercado por defecto en ropa/banco.
 
+## Ronda 2 (2026-09-29): 2000 ej. desde 140 semillas, 3 epochs, batch 1, GPU
+
+Held-out `test_es.jsonl` (50 frases NUNCA vistas en entrenamiento):
+
+| Modelo | Tool+tipo | Exacto |
+|---|---|---|
+| Base | 64% (32/50) | 16% (8/50) |
+| Tuneado v1 (1500 ej.) | 86% (43/50) | 40% (20/50) |
+| **Tuneado v2 (2000 ej. + semillas anti-error)** | **84% (42/50)** | **48% (24/50)** |
+
+Mejora real pero con rendimientos decrecientes del sintético (loss→0.000 =
+memoriza plantillas). Fallos que quedan en v2: "bono/aguinaldo"→gasto,
+"vendí"→gasto, palabras de salud (óptica, psicólogo, análisis)→ingreso,
+"clases" verbless→gasto. Conclusión: el sintético llegó a su techo (~50%);
+lo que sigue es dato REAL de uso (correcciones del chat) + la app.
+
 ## Hallazgos
 
 1. **Montos bien** cuando hay dígitos (15000, 200k=200000 OK tras documentar k/lucas en description).
