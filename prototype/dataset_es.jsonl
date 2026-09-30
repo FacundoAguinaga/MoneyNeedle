@@ -110,3 +110,31 @@
 {"query": "me pagaron quinientos mil freelance", "expected": {"tipo": "ingreso", "monto": 500000, "categoria": "otros"}}
 {"query": "pague tres millones por el auto", "expected": {"tipo": "gasto", "monto": 3000000, "categoria": "otros"}}
 {"query": "chau che nos vemos mañana", "expected": {"tipo": null, "monto": null, "categoria": null}}
+{"expected": {"categoria": "servicios", "monto": 45000, "tipo": "gasto"}, "query": "pagué 45.000 de luz"}
+{"expected": {"categoria": "comida", "monto": 28500, "tipo": "gasto"}, "query": "cena 28.500 en parrilla"}
+{"expected": {"categoria": "transporte", "monto": 12000, "tipo": "gasto"}, "query": "taxi 12.000 al centro"}
+{"expected": {"categoria": "sueldo", "monto": 950000, "tipo": "ingreso"}, "query": "sueldo 950.000 depositado"}
+{"expected": {"categoria": "otros", "monto": 120000, "tipo": "ingreso"}, "query": "cobré 120.000 de freelance"}
+{"expected": {"categoria": "salud", "monto": 23400, "tipo": "gasto"}, "query": "farmacia 23.400 en remedios"}
+{"expected": {"categoria": "transporte", "monto": 8000, "tipo": "gasto"}, "query": "cargué 8 lucas a la sube"}
+{"expected": {"categoria": "otros", "monto": 25000, "tipo": "ingreso"}, "query": "cobré 25 lucas de changa"}
+{"expected": {"categoria": "comida", "monto": 3000, "tipo": "gasto"}, "query": "almuerzo 3 lucas en el centro"}
+{"expected": {"categoria": "servicios", "monto": 12000, "tipo": "gasto"}, "query": "pagué 12 lucas de luz"}
+{"expected": {"categoria": "otros", "monto": 300000, "tipo": "ingreso"}, "query": "vendí la play 300k"}
+{"expected": {"categoria": "otros", "monto": 15000, "tipo": "ingreso"}, "query": "vendí ropa usada 15000"}
+{"expected": {"categoria": "sueldo", "monto": 500000, "tipo": "ingreso"}, "query": "bono anual 500000"}
+{"expected": {"categoria": "sueldo", "monto": 800000, "tipo": "ingreso"}, "query": "liquidación 800000 del trabajo"}
+{"expected": {"categoria": "transporte", "monto": 5000, "tipo": "gasto"}, "query": "didi 5000 a palermo"}
+{"expected": {"categoria": "transporte", "monto": 3000, "tipo": "gasto"}, "query": "peaje 3000 de la autopista"}
+{"expected": {"categoria": "otros", "monto": 60000, "tipo": "gasto"}, "query": "cochera 60000 por mes"}
+{"expected": {"categoria": "otros", "monto": 4000, "tipo": "gasto"}, "query": "estacionamiento 4000 dos horas"}
+{"expected": {"categoria": "comida", "monto": 20000, "tipo": "gasto"}, "query": "pizzas 20000 para la juntada"}
+{"expected": {"categoria": "comida", "monto": 9000, "tipo": "gasto"}, "query": "helado 9000 en la heladería"}
+{"expected": {"categoria": "otros", "monto": 30000, "tipo": "gasto"}, "query": "clases de inglés 30000"}
+{"expected": {"categoria": "otros", "monto": 25000, "tipo": "gasto"}, "query": "regalo 25000 de cumpleaños"}
+{"expected": {"categoria": "otros", "monto": 35000, "tipo": "gasto"}, "query": "veterinaria 35000 el perro"}
+{"expected": {"categoria": "otros", "monto": 12000, "tipo": "gasto"}, "query": "ferretería 12000 herramientas"}
+{"expected": {"categoria": "otros", "monto": 20000, "tipo": "gasto"}, "query": "librería 20000 útiles"}
+{"expected": {"categoria": "supermercado", "monto": 7000, "tipo": "gasto"}, "query": "dietética 7000 frutos secos"}
+{"expected": {"categoria": "supermercado", "monto": 20000, "tipo": "gasto"}, "query": "carnicería 20000 asado"}
+{"expected": {"categoria": "supermercado", "monto": 3500, "tipo": "gasto"}, "query": "panadería 3500 facturas"}

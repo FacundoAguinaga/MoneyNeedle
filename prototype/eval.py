@@ -53,7 +53,7 @@ def score(expected: dict, call: dict | None) -> tuple[bool, bool, str]:
     return (tool_ok and tipo_ok, tool_ok and tipo_ok and monto_ok and cat_ok, detail)
 
 
-def main(limit: int, tools_file: str, weights: str | None):
+def main(limit: int, tools_file: str, weights: str | None, data_file: str):
     try:
         import needle
     except ImportError:
@@ -63,7 +63,7 @@ def main(limit: int, tools_file: str, weights: str | None):
     TOOLS = json.loads((BASE / tools_file).read_text(encoding="utf-8"))
     print(f"Tools: {tools_file} ({[t['name'] for t in TOOLS]}) | weights: {weights or 'base'}")
 
-    rows = [json.loads(l) for l in (BASE / "dataset_es.jsonl").read_text(encoding="utf-8").splitlines() if l.strip()]
+    rows = [json.loads(l) for l in (BASE / data_file).read_text(encoding="utf-8").splitlines() if l.strip()]
     if limit:
         rows = rows[:limit]
 
@@ -99,5 +99,6 @@ if __name__ == "__main__":
     ap.add_argument("--limit", type=int, default=0)
     ap.add_argument("--tools", default="tools.json")
     ap.add_argument("--weights", default=None, help="ruta a tuned.cact")
+    ap.add_argument("--data", default="dataset_es.jsonl", help="archivo de frases a evaluar")
     args = ap.parse_args()
-    main(args.limit, args.tools, args.weights)
+    main(args.limit, args.tools, args.weights, args.data)
