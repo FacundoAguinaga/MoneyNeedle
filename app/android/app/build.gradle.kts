@@ -6,7 +6,9 @@ plugins {
 
 android {
     namespace = "com.moneyneedle.moneyneedle_app"
-    compileSdk = flutter.compileSdkVersion
+    // permission_handler_android exige compileSdk 37 (plataforma android-37.0
+    // ya instalada). targetSdk se deja en el de Flutter.
+    compileSdk = 37
     ndkVersion = flutter.ndkVersion
 
     compileOptions {

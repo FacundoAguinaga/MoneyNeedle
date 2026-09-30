@@ -39,3 +39,7 @@
     keywords, moneda, validación, inferencia Needle) vive en Rust. Flutter
     llama al core via `flutter_rust_bridge` y muestra resultados. Nunca
     duplicar lógica en Dart.
+13. **STT: locale del sistema + fallback online.** Forzar `es-AR` falla con
+    STT_12 si no está el pack offline. Se intenta offline primero y ante
+    error 12/13/2 se reintenta online una vez. El permiso de mic se pide
+    con `permission_handler`, con atajo a Ajustes si está bloqueado.
