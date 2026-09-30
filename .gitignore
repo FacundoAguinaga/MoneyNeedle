@@ -41,3 +41,7 @@ prototype/data/
 
 # FVM Version Cache
 .fvm/
+
+# Binarios Android regenerables (cargo ndk) + modelo (needle build)
+app/android/app/src/main/jniLibs/
+app/assets/models/

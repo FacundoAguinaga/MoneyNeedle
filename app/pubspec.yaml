@@ -9,9 +9,9 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  # Futuro: flutter_rust_bridge, drift/sqlite, record (mic), sherpa_onnx
   cupertino_icons: ^1.0.6
   flutter_rust_bridge: ^2.13.0
+  path_provider: ^2.1.6
 
 dev_dependencies:
   flutter_test:
@@ -20,3 +20,5 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+  assets:
+    - assets/models/tuned2.cact
