@@ -1,7 +1,7 @@
-"""Eval Fase 0: corre dataset_es.jsonl contra Needle 3 base y mide accuracy.
+"""Eval: corre un dataset JSONL contra Needle 3 y mide accuracy.
 
 Uso:
-  pip install -r requirements.txt
+  uv pip install -r requirements.txt
   python eval.py
   python eval.py --limit 10
 """

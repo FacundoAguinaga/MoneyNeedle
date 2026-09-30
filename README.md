@@ -32,7 +32,7 @@ Ver `docs/baseline.md` (resultados), `docs/training.md` (bitácora y comandos),
 ```bash
 # 1. Prototipo Python (validar Needle 3 sin móvil)
 cd prototype
-pip install -r requirements.txt
+uv pip install -r requirements.txt
 python test.py --phrase "gasté 5000 en supermercado ayer"
 
 # 2. Core Rust

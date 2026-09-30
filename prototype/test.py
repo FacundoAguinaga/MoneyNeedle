@@ -16,7 +16,7 @@ def run(phrase: str):
     try:
         import needle
     except ImportError:
-        print("cactus-needle no instalado. Corré: pip install -r requirements.txt")
+        print("cactus-needle no instalado. Corré: uv pip install -r requirements.txt")
         print(f"TOOLS que se usarían: {json.dumps(TOOLS, ensure_ascii=False)}")
         print(f"PHRASE: {phrase}")
         return
