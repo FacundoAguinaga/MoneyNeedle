@@ -4,13 +4,14 @@ publish_to: "none"
 version: 0.1.0+1
 
 environment:
-  sdk: ">=3.2.0 <4.0.0"
+  sdk: ">=3.4.0 <4.0.0"
 
 dependencies:
   flutter:
     sdk: flutter
   # Futuro: flutter_rust_bridge, drift/sqlite, record (mic), sherpa_onnx
   cupertino_icons: ^1.0.6
+  flutter_rust_bridge: ^2.13.0
 
 dev_dependencies:
   flutter_test:
