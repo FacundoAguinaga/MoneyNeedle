@@ -1,4 +1,8 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:path_provider/path_provider.dart';
 import 'src/rust/api.dart/api.dart';
 import 'src/rust/api.dart/frb_generated.dart';
 
@@ -41,13 +45,20 @@ class _HomePageState extends State<HomePage> {
   Future<void> _proponer() async {
     final texto = _controller.text.trim();
     if (texto.isEmpty) return;
-    // Cableado Dart→Rust verificado con el mock (sin modelo).
-    // proposeReal(query, fecha, cactPath) cuando el .cact esté bunddeado.
+    final fecha =
+        DateTime.now().toIso8601String().substring(0, 10);
     try {
-      final p = await proposeMocked(
-        query: texto,
-        fechaHoy: DateTime.now().toIso8601String().substring(0, 10),
-      );
+      // Engine real si el .cact está bunddeado; si no, mock.
+      ProposalDto p;
+      try {
+        p = await proposeReal(
+          query: texto,
+          fechaHoy: fecha,
+          cactPath: await _cactPath(),
+        );
+      } catch (_) {
+        p = await proposeMocked(query: texto, fechaHoy: fecha);
+      }
       setState(() {
         _pending = PendingProposal(
           texto,
@@ -60,6 +71,18 @@ class _HomePageState extends State<HomePage> {
         _pending = PendingProposal(texto, 'Error del core: $e');
       });
     }
+  }
+
+  /// Copia el asset a un archivo real (el engine necesita path, no bundle).
+  /// Si no hay asset bunddeado, lanza y el llamador usa el mock.
+  Future<String> _cactPath() async {
+    final bytes = await rootBundle.load('assets/models/tuned2.cact');
+    final dir = await getApplicationDocumentsDirectory();
+    final f = File('${dir.path}/tuned2.cact');
+    if (!await f.exists()) {
+      await f.writeAsBytes(bytes.buffer.asUint8List());
+    }
+    return f.path;
   }
 
   void _confirmar() {
