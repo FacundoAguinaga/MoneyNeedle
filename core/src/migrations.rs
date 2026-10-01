@@ -5,7 +5,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::time::{SystemTime, UNIX_EPOCH};
 
-pub const SCHEMA_VERSION: u32 = 1;
+pub const SCHEMA_VERSION: u32 = 2;
 
 /// Migración SQL inicial (v1): Modelo relacional completo para MoneyNeedle.
 pub const MIGRATION_V1: &str = r#"
@@ -122,6 +122,41 @@ CREATE TABLE IF NOT EXISTS exchange_rates (
 CREATE INDEX IF NOT EXISTS idx_exchange_rates_pair ON exchange_rates(base_currency, quote_currency, timestamp DESC);
 "#;
 
+/// Migración SQL v2: Presupuestos por categoría y Metas de ahorro (Fase 5).
+pub const MIGRATION_V2: &str = r#"
+-- Presupuestos mensuales por categoría
+CREATE TABLE IF NOT EXISTS budgets (
+    id BLOB PRIMARY KEY, -- UUID v7 (16 bytes)
+    category_id BLOB NOT NULL REFERENCES categories(id) ON DELETE CASCADE,
+    currency TEXT NOT NULL,
+    amount INTEGER NOT NULL CHECK (amount > 0), -- monto límite mensual en centavos
+    alert_percentage INTEGER NOT NULL DEFAULT 80 CHECK (alert_percentage BETWEEN 1 AND 100),
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL,
+    deleted_at INTEGER
+);
+
+CREATE INDEX IF NOT EXISTS idx_budgets_category ON budgets(category_id);
+
+-- Metas de ahorro
+CREATE TABLE IF NOT EXISTS saving_goals (
+    id BLOB PRIMARY KEY, -- UUID v7 (16 bytes)
+    name TEXT NOT NULL,
+    target_amount INTEGER NOT NULL CHECK (target_amount > 0), -- en centavos
+    currency TEXT NOT NULL,
+    target_date INTEGER, -- unix ms opcional
+    color TEXT NOT NULL DEFAULT '#2196F3',
+    icon TEXT NOT NULL DEFAULT 'flag',
+    current_amount INTEGER NOT NULL DEFAULT 0, -- centavos acumulados
+    status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'completed', 'paused')),
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL,
+    deleted_at INTEGER
+);
+
+CREATE INDEX IF NOT EXISTS idx_saving_goals_status ON saving_goals(status);
+"#;
+
 /// Obtiene la versión actual del esquema de la base de datos.
 pub fn get_user_version(conn: &Connection) -> Result<u32, String> {
     let mut stmt = conn
@@ -174,6 +209,9 @@ pub fn run_migrations(conn: &mut Connection) -> Result<(), String> {
     if current_version < 1 {
         tx.execute_batch(MIGRATION_V1).map_err(|e| e.to_string())?;
     }
+    if current_version < 2 {
+        tx.execute_batch(MIGRATION_V2).map_err(|e| e.to_string())?;
+    }
 
     tx.commit().map_err(|e| e.to_string())?;
     set_user_version(conn, SCHEMA_VERSION)?;
@@ -191,11 +229,30 @@ mod tests {
         assert_eq!(get_user_version(&conn).unwrap(), 0);
 
         run_migrations(&mut conn).unwrap();
-        assert_eq!(get_user_version(&conn).unwrap(), 1);
+        assert_eq!(get_user_version(&conn).unwrap(), 2);
 
         // Correrlas de nuevo no debería fallar ni alterar versión
         run_migrations(&mut conn).unwrap();
+        assert_eq!(get_user_version(&conn).unwrap(), 2);
+    }
+
+    #[test]
+    fn test_migration_incremental_v1_to_v2() {
+        let mut conn = Connection::open_in_memory().unwrap();
+        // Simular base que ya estaba en v1
+        conn.execute_batch(MIGRATION_V1).unwrap();
+        set_user_version(&conn, 1).unwrap();
         assert_eq!(get_user_version(&conn).unwrap(), 1);
+
+        // Ejecutar migración: debe aplicar solo v2 y actualizar versión a 2
+        run_migrations(&mut conn).unwrap();
+        assert_eq!(get_user_version(&conn).unwrap(), 2);
+
+        // Verificar que las nuevas tablas existen
+        let budget_count: i64 = conn.query_row("SELECT count(*) FROM budgets", [], |r| r.get(0)).unwrap();
+        assert_eq!(budget_count, 0);
+        let goals_count: i64 = conn.query_row("SELECT count(*) FROM saving_goals", [], |r| r.get(0)).unwrap();
+        assert_eq!(goals_count, 0);
     }
 
     #[test]

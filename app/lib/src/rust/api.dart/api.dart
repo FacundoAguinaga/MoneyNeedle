@@ -8,7 +8,7 @@ import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
 // These functions are ignored because they are not marked as `pub`: `engine`
 // These types are ignored because they are neither used by any `pub` functions nor (for structs and enums) marked `#[frb(unignore)]`: `Engine`
-// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `from`, `from`, `from`, `from`, `from`
+// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `from`, `from`, `from`, `from`, `from`
 
 /// Pipeline con inferencia mockeada: verifica el cableado sin modelo.
 Future<ProposalDto> proposeMocked(
@@ -239,6 +239,77 @@ Future<FinancialKpisDto> getFinancialKpis(
         endDateMs: endDateMs,
         currency: currency);
 
+/// Define o actualiza el límite mensual de una categoría.
+Future<String> setCategoryBudget(
+        {required String dbPath,
+        required String categoryId,
+        required String currency,
+        required double amount,
+        required int alertPercentage}) =>
+    RustLib.instance.api.crateApiSetCategoryBudget(
+        dbPath: dbPath,
+        categoryId: categoryId,
+        currency: currency,
+        amount: amount,
+        alertPercentage: alertPercentage);
+
+/// Consulta el estado de todos los presupuestos activos contra los consumos del período.
+Future<List<BudgetStatusDto>> listBudgetsStatus(
+        {required String dbPath,
+        required PlatformInt64 startDateMs,
+        required PlatformInt64 endDateMs,
+        required String currency}) =>
+    RustLib.instance.api.crateApiListBudgetsStatus(
+        dbPath: dbPath,
+        startDateMs: startDateMs,
+        endDateMs: endDateMs,
+        currency: currency);
+
+/// Elimina un presupuesto.
+Future<bool> deleteBudget({required String dbPath, required String budgetId}) =>
+    RustLib.instance.api
+        .crateApiDeleteBudget(dbPath: dbPath, budgetId: budgetId);
+
+/// Crea una nueva meta de ahorro.
+Future<String> createSavingGoal(
+        {required String dbPath,
+        required String name,
+        required double targetAmount,
+        required String currency,
+        PlatformInt64? targetDate,
+        required String color,
+        required String icon}) =>
+    RustLib.instance.api.crateApiCreateSavingGoal(
+        dbPath: dbPath,
+        name: name,
+        targetAmount: targetAmount,
+        currency: currency,
+        targetDate: targetDate,
+        color: color,
+        icon: icon);
+
+/// Lista todas las metas de ahorro.
+Future<List<SavingGoalDto>> listSavingGoals({required String dbPath}) =>
+    RustLib.instance.api.crateApiListSavingGoals(dbPath: dbPath);
+
+/// Aporta una cantidad (o deduce) a una meta de ahorro.
+Future<double> contributeToSavingGoal(
+        {required String dbPath,
+        required String goalId,
+        required double amount}) =>
+    RustLib.instance.api.crateApiContributeToSavingGoal(
+        dbPath: dbPath, goalId: goalId, amount: amount);
+
+/// Elimina una meta de ahorro.
+Future<bool> deleteSavingGoal(
+        {required String dbPath, required String goalId}) =>
+    RustLib.instance.api
+        .crateApiDeleteSavingGoal(dbPath: dbPath, goalId: goalId);
+
+/// Lista todas las categorías activas.
+Future<List<CategoryDto>> listCategories({required String dbPath}) =>
+    RustLib.instance.api.crateApiListCategories(dbPath: dbPath);
+
 /// DTO para cuentas y saldos en UI.
 class AccountDto {
   final String id;
@@ -297,6 +368,69 @@ class AccountDto {
           creditLimit == other.creditLimit &&
           closingDay == other.closingDay &&
           dueDay == other.dueDay;
+}
+
+class BudgetStatusDto {
+  final String id;
+  final String categoryId;
+  final String categoryName;
+  final String categoryColor;
+  final String categoryIcon;
+  final String currency;
+  final double budgetAmount;
+  final double spentAmount;
+  final double remainingAmount;
+  final double spentPercentage;
+  final bool isOverBudget;
+  final bool isWarning;
+
+  const BudgetStatusDto({
+    required this.id,
+    required this.categoryId,
+    required this.categoryName,
+    required this.categoryColor,
+    required this.categoryIcon,
+    required this.currency,
+    required this.budgetAmount,
+    required this.spentAmount,
+    required this.remainingAmount,
+    required this.spentPercentage,
+    required this.isOverBudget,
+    required this.isWarning,
+  });
+
+  @override
+  int get hashCode =>
+      id.hashCode ^
+      categoryId.hashCode ^
+      categoryName.hashCode ^
+      categoryColor.hashCode ^
+      categoryIcon.hashCode ^
+      currency.hashCode ^
+      budgetAmount.hashCode ^
+      spentAmount.hashCode ^
+      remainingAmount.hashCode ^
+      spentPercentage.hashCode ^
+      isOverBudget.hashCode ^
+      isWarning.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is BudgetStatusDto &&
+          runtimeType == other.runtimeType &&
+          id == other.id &&
+          categoryId == other.categoryId &&
+          categoryName == other.categoryName &&
+          categoryColor == other.categoryColor &&
+          categoryIcon == other.categoryIcon &&
+          currency == other.currency &&
+          budgetAmount == other.budgetAmount &&
+          spentAmount == other.spentAmount &&
+          remainingAmount == other.remainingAmount &&
+          spentPercentage == other.spentPercentage &&
+          isOverBudget == other.isOverBudget &&
+          isWarning == other.isWarning;
 }
 
 /// Resumen de tarjeta para un ciclo mensual.
@@ -416,6 +550,34 @@ class CashflowItemDto {
           expenseAmount == other.expenseAmount &&
           netAmount == other.netAmount &&
           currency == other.currency;
+}
+
+class CategoryDto {
+  final String id;
+  final String name;
+  final String icon;
+  final String color;
+
+  const CategoryDto({
+    required this.id,
+    required this.name,
+    required this.icon,
+    required this.color,
+  });
+
+  @override
+  int get hashCode =>
+      id.hashCode ^ name.hashCode ^ icon.hashCode ^ color.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is CategoryDto &&
+          runtimeType == other.runtimeType &&
+          id == other.id &&
+          name == other.name &&
+          icon == other.icon &&
+          color == other.color;
 }
 
 class CategoryReportDto {
@@ -725,6 +887,61 @@ class RecurringRuleDto {
           frequency == other.frequency &&
           startDate == other.startDate &&
           autoApply == other.autoApply;
+}
+
+class SavingGoalDto {
+  final String id;
+  final String name;
+  final double targetAmount;
+  final double currentAmount;
+  final double progressPercentage;
+  final String currency;
+  final PlatformInt64? targetDate;
+  final String color;
+  final String icon;
+  final String status;
+
+  const SavingGoalDto({
+    required this.id,
+    required this.name,
+    required this.targetAmount,
+    required this.currentAmount,
+    required this.progressPercentage,
+    required this.currency,
+    this.targetDate,
+    required this.color,
+    required this.icon,
+    required this.status,
+  });
+
+  @override
+  int get hashCode =>
+      id.hashCode ^
+      name.hashCode ^
+      targetAmount.hashCode ^
+      currentAmount.hashCode ^
+      progressPercentage.hashCode ^
+      currency.hashCode ^
+      targetDate.hashCode ^
+      color.hashCode ^
+      icon.hashCode ^
+      status.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is SavingGoalDto &&
+          runtimeType == other.runtimeType &&
+          id == other.id &&
+          name == other.name &&
+          targetAmount == other.targetAmount &&
+          currentAmount == other.currentAmount &&
+          progressPercentage == other.progressPercentage &&
+          currency == other.currency &&
+          targetDate == other.targetDate &&
+          color == other.color &&
+          icon == other.icon &&
+          status == other.status;
 }
 
 /// DTO con los datos de creación inicial del vault.
