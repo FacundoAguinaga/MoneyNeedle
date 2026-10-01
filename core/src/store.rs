@@ -5,6 +5,8 @@
 //! y exportación para reentrenamiento de Cactus Needle.
 
 use rusqlite::{params, Connection, OptionalExtension};
+use std::collections::HashMap;
+use std::sync::{Mutex, OnceLock};
 use std::time::{SystemTime, UNIX_EPOCH};
 use uuid::Uuid;
 use zeroize::Zeroizing;
@@ -339,9 +341,36 @@ pub fn open(
     Ok(conn)
 }
 
-/// Helper para tests o apertura sin clave cifrada.
+static ACTIVE_HEX_KEYS: OnceLock<Mutex<HashMap<String, Zeroizing<String>>>> = OnceLock::new();
+
+fn active_hex_keys() -> &'static Mutex<HashMap<String, Zeroizing<String>>> {
+    ACTIVE_HEX_KEYS.get_or_init(|| Mutex::new(HashMap::new()))
+}
+
+pub fn set_active_key_for_path(db_path: &str, key: Option<Zeroizing<String>>) {
+    if let Ok(mut lock) = active_hex_keys().lock() {
+        match key {
+            Some(k) => {
+                lock.insert(db_path.to_string(), k);
+            }
+            None => {
+                lock.remove(db_path);
+            }
+        }
+    }
+}
+
+pub fn get_active_key_for_path(db_path: &str) -> Option<Zeroizing<String>> {
+    active_hex_keys().lock().ok().and_then(|m| m.get(db_path).cloned())
+}
+
+/// Abre la conexión utilizando la clave activa de la sesión para la ruta indicada (o None si es :memory: o no hay clave).
 pub fn open_default(db_path: &str) -> Result<Connection, String> {
-    open(db_path, None)
+    if db_path == ":memory:" {
+        return open(db_path, None);
+    }
+    let key = get_active_key_for_path(db_path);
+    open(db_path, key.as_ref())
 }
 
 /// Garantiza que exista al menos una cuenta por defecto y categorías base.

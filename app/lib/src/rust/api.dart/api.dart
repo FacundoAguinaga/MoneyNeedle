@@ -24,10 +24,14 @@ Future<ProposalDto> proposeReal(
     RustLib.instance.api.crateApiProposeReal(
         query: query, fechaHoy: fechaHoy, cactPath: cactPath);
 
-/// Inicializa la base de datos con clave SQLCipher opcional (hex crudo).
+/// Inicializa la base de datos con clave SQLCipher opcional (hex crudo) y la guarda para la sesión activa.
 Future<bool> initDatabase({required String dbPath, String? rawKeyHex}) =>
     RustLib.instance.api
         .crateApiInitDatabase(dbPath: dbPath, rawKeyHex: rawKeyHex);
+
+/// Cierra y borra de memoria la clave activa de la sesión de base de datos para la ruta indicada.
+Future<bool> lockDatabase({required String dbPath}) =>
+    RustLib.instance.api.crateApiLockDatabase(dbPath: dbPath);
 
 /// Guarda la propuesta confirmada. `db_path` = archivo SQLite en la app.
 Future<String> confirmMovement(
