@@ -137,6 +137,23 @@ class _AccountsTabState extends State<AccountsTab> {
     );
   }
 
+  void _abrirTransferenciaModal() {
+    if (_accounts.length < 2) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Necesitás al menos 2 cuentas para realizar una transferencia.')),
+      );
+      return;
+    }
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      builder: (ctx) => Padding(
+        padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
+        child: _TransferSheet(accounts: _accounts, onTransferred: _cargarCuentas),
+      ),
+    );
+  }
+
   void _verResumenTarjeta(AccountDto card) {
     showModalBottomSheet(
       context: context,
@@ -190,6 +207,26 @@ class _AccountsTabState extends State<AccountsTab> {
                         ],
                       ),
                     ),
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: FilledButton.tonalIcon(
+                          icon: const Icon(Icons.swap_horiz),
+                          label: const Text('Transferir'),
+                          onPressed: _accounts.length >= 2 ? _abrirTransferenciaModal : null,
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          icon: const Icon(Icons.add),
+                          label: const Text('Nueva Cuenta'),
+                          onPressed: _abrirCrearCuentaModal,
+                        ),
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 16),
                   Row(
@@ -724,6 +761,317 @@ class _CardStatementSheetState extends State<_CardStatementSheet> {
               ),
             ),
           ],
+        ],
+      ),
+    );
+  }
+}
+
+class _TransferSheet extends StatefulWidget {
+  final List<AccountDto> accounts;
+  final VoidCallback onTransferred;
+
+  const _TransferSheet({required this.accounts, required this.onTransferred});
+
+  @override
+  State<_TransferSheet> createState() => _TransferSheetState();
+}
+
+class _TransferSheetState extends State<_TransferSheet> {
+  late String _fromAccountId;
+  late String _toAccountId;
+  final _fromAmountCtrl = TextEditingController();
+  final _toAmountCtrl = TextEditingController();
+  final _notesCtrl = TextEditingController();
+  ExchangeRateDto? _latestRate;
+  bool _transferring = false;
+
+  AccountDto get _fromAccount =>
+      widget.accounts.firstWhere((a) => a.id == _fromAccountId);
+  AccountDto get _toAccount =>
+      widget.accounts.firstWhere((a) => a.id == _toAccountId);
+
+  bool get _isMultiCurrency => _fromAccount.currency != _toAccount.currency;
+
+  @override
+  void initState() {
+    super.initState();
+    _fromAccountId = widget.accounts.first.id;
+    _toAccountId = widget.accounts.length > 1 ? widget.accounts[1].id : widget.accounts.first.id;
+    _consultarCotizacion();
+  }
+
+  Future<void> _consultarCotizacion() async {
+    if (!_isMultiCurrency) {
+      setState(() => _latestRate = null);
+      return;
+    }
+    try {
+      final dbPath = await VaultService.getDbPath();
+      final rate = await getLatestExchangeRate(
+        dbPath: dbPath,
+        baseCurrency: _fromAccount.currency,
+        quoteCurrency: _toAccount.currency,
+      );
+      if (mounted) {
+        setState(() => _latestRate = rate);
+      }
+    } catch (_) {}
+  }
+
+  void _onFromAccountChanged(String? val) {
+    if (val == null) return;
+    setState(() {
+      _fromAccountId = val;
+      if (_toAccountId == val) {
+        final other = widget.accounts.firstWhere((a) => a.id != val);
+        _toAccountId = other.id;
+      }
+    });
+    _consultarCotizacion();
+  }
+
+  void _onToAccountChanged(String? val) {
+    if (val == null) return;
+    setState(() {
+      _toAccountId = val;
+    });
+    _consultarCotizacion();
+  }
+
+  void _aplicarCotizacionPrevia() {
+    if (_latestRate == null) return;
+    final fromAmount = double.tryParse(_fromAmountCtrl.text.trim());
+    if (fromAmount != null && fromAmount > 0) {
+      final to = fromAmount * _latestRate!.rate;
+      _toAmountCtrl.text = to.toStringAsFixed(2);
+      setState(() {});
+    }
+  }
+
+  Future<void> _ejecutarTransferencia() async {
+    if (_fromAccountId == _toAccountId) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('La cuenta de origen y destino no pueden ser la misma')),
+      );
+      return;
+    }
+
+    final fromAmount = double.tryParse(_fromAmountCtrl.text.trim());
+    if (fromAmount == null || fromAmount <= 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Ingresá un monto de origen mayor a 0')),
+      );
+      return;
+    }
+
+    double toAmount;
+    if (_isMultiCurrency) {
+      final parsedTo = double.tryParse(_toAmountCtrl.text.trim());
+      if (parsedTo == null || parsedTo <= 0) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Ingresá el monto de destino mayor a 0')),
+        );
+        return;
+      }
+      toAmount = parsedTo;
+    } else {
+      toAmount = fromAmount;
+    }
+
+    setState(() => _transferring = true);
+    try {
+      final dbPath = await VaultService.getDbPath();
+      final notes = _notesCtrl.text.trim().isNotEmpty
+          ? _notesCtrl.text.trim()
+          : 'Transferencia ${_fromAccount.name} → ${_toAccount.name}';
+
+      await createTransfer(
+        dbPath: dbPath,
+        fromAccountId: _fromAccountId,
+        toAccountId: _toAccountId,
+        fromAmount: fromAmount,
+        toAmount: toAmount,
+        notes: notes,
+      );
+
+      widget.onTransferred();
+      if (mounted) {
+        Navigator.pop(context);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Transferencia realizada con éxito')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _transferring = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error al transferir: $e')),
+        );
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final fromAmount = double.tryParse(_fromAmountCtrl.text.trim());
+    final toAmount = double.tryParse(_toAmountCtrl.text.trim());
+
+    String? implicitRateStr;
+    if (_isMultiCurrency && fromAmount != null && toAmount != null && fromAmount > 0 && toAmount > 0) {
+      if (fromAmount > toAmount) {
+        final rate = fromAmount / toAmount;
+        implicitRateStr = '1 ${_toAccount.currency} ≈ ${rate.toStringAsFixed(2)} ${_fromAccount.currency}';
+      } else {
+        final rate = toAmount / fromAmount;
+        implicitRateStr = '1 ${_fromAccount.currency} ≈ ${rate.toStringAsFixed(2)} ${_toAccount.currency}';
+      }
+    }
+
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Transferir Fondos',
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+              ),
+              IconButton(icon: const Icon(Icons.close), onPressed: () => Navigator.pop(context)),
+            ],
+          ),
+          const SizedBox(height: 16),
+          DropdownButtonFormField<String>(
+            initialValue: _fromAccountId,
+            decoration: const InputDecoration(
+              labelText: 'Cuenta de Origen (sale)',
+              border: OutlineInputBorder(),
+            ),
+            items: widget.accounts
+                .map((a) => DropdownMenuItem(
+                      value: a.id,
+                      child: Text('${a.name} (${a.currency} \$${a.currentBalance.toStringAsFixed(2)})'),
+                    ))
+                .toList(),
+            onChanged: _onFromAccountChanged,
+          ),
+          const SizedBox(height: 12),
+          DropdownButtonFormField<String>(
+            initialValue: _toAccountId,
+            decoration: const InputDecoration(
+              labelText: 'Cuenta de Destino (entra)',
+              border: OutlineInputBorder(),
+            ),
+            items: widget.accounts
+                .where((a) => a.id != _fromAccountId)
+                .map((a) => DropdownMenuItem(
+                      value: a.id,
+                      child: Text('${a.name} (${a.currency} \$${a.currentBalance.toStringAsFixed(2)})'),
+                    ))
+                .toList(),
+            onChanged: _onToAccountChanged,
+          ),
+          const SizedBox(height: 16),
+          if (!_isMultiCurrency) ...[
+            TextField(
+              controller: _fromAmountCtrl,
+              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              decoration: InputDecoration(
+                labelText: 'Monto a transferir (${_fromAccount.currency})',
+                hintText: 'Ej. 5000',
+                border: const OutlineInputBorder(),
+              ),
+            ),
+          ] else ...[
+            Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _fromAmountCtrl,
+                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                    decoration: InputDecoration(
+                      labelText: 'Sale (${_fromAccount.currency})',
+                      hintText: 'Ej. 1200000',
+                      border: const OutlineInputBorder(),
+                    ),
+                    onChanged: (_) => setState(() {}),
+                  ),
+                ),
+                const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 8),
+                  child: Icon(Icons.arrow_forward),
+                ),
+                Expanded(
+                  child: TextField(
+                    controller: _toAmountCtrl,
+                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                    decoration: InputDecoration(
+                      labelText: 'Entra (${_toAccount.currency})',
+                      hintText: 'Ej. 1000',
+                      border: const OutlineInputBorder(),
+                    ),
+                    onChanged: (_) => setState(() {}),
+                  ),
+                ),
+              ],
+            ),
+            if (implicitRateStr != null) ...[
+              const SizedBox(height: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: Colors.blue.shade50,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.currency_exchange, size: 16, color: Colors.blue.shade800),
+                    const SizedBox(width: 6),
+                    Text(
+                      'Cotización implícita: $implicitRateStr',
+                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.blue.shade800),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+            if (_latestRate != null) ...[
+              const SizedBox(height: 6),
+              ActionChip(
+                avatar: const Icon(Icons.history, size: 16),
+                label: Text(
+                  'Última cotización: 1 ${_fromAccount.currency} = ${_latestRate!.rate.toStringAsFixed(4)} ${_toAccount.currency}',
+                  style: const TextStyle(fontSize: 11),
+                ),
+                onPressed: _aplicarCotizacionPrevia,
+              ),
+            ],
+          ],
+          const SizedBox(height: 12),
+          TextField(
+            controller: _notesCtrl,
+            decoration: const InputDecoration(
+              labelText: 'Notas / Motivo (opcional)',
+              hintText: 'Ej. Ahorro, Cambio de divisa, etc.',
+              border: OutlineInputBorder(),
+            ),
+          ),
+          const SizedBox(height: 20),
+          SizedBox(
+            width: double.infinity,
+            child: FilledButton.icon(
+              icon: _transferring
+                  ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                  : const Icon(Icons.swap_horiz),
+              label: Text(_transferring ? 'Transfiriendo...' : 'Confirmar Transferencia'),
+              onPressed: _transferring ? null : _ejecutarTransferencia,
+            ),
+          ),
         ],
       ),
     );

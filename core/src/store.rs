@@ -903,6 +903,81 @@ pub fn insert_transfer(
     Ok(*tx_id.as_bytes())
 }
 
+#[derive(Debug, Clone, PartialEq)]
+pub struct ExchangeRateRecord {
+    pub base_currency: String,
+    pub quote_currency: String,
+    pub rate: f64,
+    pub timestamp: i64,
+}
+
+pub fn get_latest_exchange_rate(
+    conn: &Connection,
+    base_currency: &str,
+    quote_currency: &str,
+) -> Result<Option<ExchangeRateRecord>, String> {
+    let mut stmt = conn
+        .prepare(
+            "SELECT base_currency, quote_currency, rate, timestamp
+             FROM exchange_rates
+             WHERE base_currency = ?1 AND quote_currency = ?2 AND deleted_at IS NULL
+             ORDER BY timestamp DESC, created_at DESC
+             LIMIT 1",
+        )
+        .map_err(|e| e.to_string())?;
+
+    let res: Option<ExchangeRateRecord> = stmt
+        .query_row(params![base_currency, quote_currency], |r| {
+            let base: String = r.get(0)?;
+            let quote: String = r.get(1)?;
+            let raw_rate: i64 = r.get(2)?;
+            let ts: i64 = r.get(3)?;
+            Ok(ExchangeRateRecord {
+                base_currency: base,
+                quote_currency: quote,
+                rate: raw_rate as f64 / FX_SCALE as f64,
+                timestamp: ts,
+            })
+        })
+        .optional()
+        .map_err(|e| e.to_string())?;
+
+    Ok(res)
+}
+
+pub fn list_exchange_rates(conn: &Connection) -> Result<Vec<ExchangeRateRecord>, String> {
+    let mut stmt = conn
+        .prepare(
+            "SELECT base_currency, quote_currency, rate, timestamp
+             FROM exchange_rates
+             WHERE deleted_at IS NULL
+             ORDER BY timestamp DESC, created_at DESC
+             LIMIT 50",
+        )
+        .map_err(|e| e.to_string())?;
+
+    let rows = stmt
+        .query_map([], |r| {
+            let base: String = r.get(0)?;
+            let quote: String = r.get(1)?;
+            let raw_rate: i64 = r.get(2)?;
+            let ts: i64 = r.get(3)?;
+            Ok(ExchangeRateRecord {
+                base_currency: base,
+                quote_currency: quote,
+                rate: raw_rate as f64 / FX_SCALE as f64,
+                timestamp: ts,
+            })
+        })
+        .map_err(|e| e.to_string())?;
+
+    let mut out = Vec::new();
+    for row in rows {
+        out.push(row.map_err(|e| e.to_string())?);
+    }
+    Ok(out)
+}
+
 /// Días en un mes específico para cálculo seguro de cierre/vencimiento.
 pub fn days_in_month(year: i32, month: i32) -> i32 {
     match month {

@@ -8,7 +8,7 @@ import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
 // These functions are ignored because they are not marked as `pub`: `engine`
 // These types are ignored because they are neither used by any `pub` functions nor (for structs and enums) marked `#[frb(unignore)]`: `Engine`
-// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `from`, `from`, `from`, `from`
+// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `from`, `from`, `from`, `from`, `from`
 
 /// Pipeline con inferencia mockeada: verifica el cableado sin modelo.
 Future<ProposalDto> proposeMocked(
@@ -74,6 +74,36 @@ Future<String> confirmCreditPurchase(
         descripcion: descripcion,
         startCycleYear: startCycleYear,
         startCycleMonth: startCycleMonth);
+
+/// Registra una transferencia entre cuentas (misma moneda o con cambio de divisa).
+Future<String> createTransfer(
+        {required String dbPath,
+        required String fromAccountId,
+        required String toAccountId,
+        required double fromAmount,
+        required double toAmount,
+        required String notes}) =>
+    RustLib.instance.api.crateApiCreateTransfer(
+        dbPath: dbPath,
+        fromAccountId: fromAccountId,
+        toAccountId: toAccountId,
+        fromAmount: fromAmount,
+        toAmount: toAmount,
+        notes: notes);
+
+/// Consulta la última cotización registrada entre dos monedas.
+Future<ExchangeRateDto?> getLatestExchangeRate(
+        {required String dbPath,
+        required String baseCurrency,
+        required String quoteCurrency}) =>
+    RustLib.instance.api.crateApiGetLatestExchangeRate(
+        dbPath: dbPath,
+        baseCurrency: baseCurrency,
+        quoteCurrency: quoteCurrency);
+
+/// Lista el historial de cotizaciones registradas.
+Future<List<ExchangeRateDto>> listExchangeRates({required String dbPath}) =>
+    RustLib.instance.api.crateApiListExchangeRates(dbPath: dbPath);
 
 /// Lista todas las cuentas activas con su saldo calculado.
 Future<List<AccountDto>> listAccounts({required String dbPath}) =>
@@ -309,6 +339,38 @@ class CardStatementItemDto {
           amount == other.amount &&
           description == other.description &&
           status == other.status;
+}
+
+/// DTO con cotización histórica o implícita entre monedas.
+class ExchangeRateDto {
+  final String baseCurrency;
+  final String quoteCurrency;
+  final double rate;
+  final PlatformInt64 timestamp;
+
+  const ExchangeRateDto({
+    required this.baseCurrency,
+    required this.quoteCurrency,
+    required this.rate,
+    required this.timestamp,
+  });
+
+  @override
+  int get hashCode =>
+      baseCurrency.hashCode ^
+      quoteCurrency.hashCode ^
+      rate.hashCode ^
+      timestamp.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is ExchangeRateDto &&
+          runtimeType == other.runtimeType &&
+          baseCurrency == other.baseCurrency &&
+          quoteCurrency == other.quoteCurrency &&
+          rate == other.rate &&
+          timestamp == other.timestamp;
 }
 
 /// Movimiento guardado, listo para la lista de la UI.
