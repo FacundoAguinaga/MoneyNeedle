@@ -10,6 +10,8 @@ import 'src/screens/metrics_tab.dart';
 
 import 'src/screens/settings_screen.dart';
 
+import 'src/theme/mn_theme.dart';
+
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await RustLib.init();
@@ -23,7 +25,9 @@ class MoneyNeedleApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'MoneyNeedle',
-      theme: ThemeData(useMaterial3: true, colorSchemeSeed: Colors.green),
+      theme: MnTheme.light(),
+      darkTheme: MnTheme.dark(),
+      themeMode: ThemeMode.system,
       home: const RootGate(),
     );
   }
