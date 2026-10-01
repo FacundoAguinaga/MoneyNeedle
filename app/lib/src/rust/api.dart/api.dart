@@ -24,8 +24,13 @@ Future<ProposalDto> proposeReal(
     RustLib.instance.api.crateApiProposeReal(
         query: query, fechaHoy: fechaHoy, cactPath: cactPath);
 
+/// Inicializa la base de datos con clave SQLCipher opcional (hex crudo).
+Future<bool> initDatabase({required String dbPath, String? rawKeyHex}) =>
+    RustLib.instance.api
+        .crateApiInitDatabase(dbPath: dbPath, rawKeyHex: rawKeyHex);
+
 /// Guarda la propuesta confirmada. `db_path` = archivo SQLite en la app.
-Future<PlatformInt64> confirmMovement(
+Future<String> confirmMovement(
         {required String dbPath,
         required String tipo,
         required double monto,
@@ -51,7 +56,7 @@ Future<List<MovementDto>> listMovements(
 
 /// Movimiento guardado, listo para la lista de la UI.
 class MovementDto {
-  final PlatformInt64 id;
+  final String id;
   final String tipo;
   final double monto;
   final String moneda;

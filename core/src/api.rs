@@ -91,7 +91,7 @@ pub fn propose_real(
 /// Movimiento guardado, listo para la lista de la UI.
 #[derive(Debug, Clone)]
 pub struct MovementDto {
-    pub id: i64,
+    pub id: String,
     pub tipo: String,
     pub monto: f64,
     pub moneda: String,
@@ -114,6 +114,14 @@ impl From<store::Movement> for MovementDto {
     }
 }
 
+/// Inicializa la base de datos con clave SQLCipher opcional (hex crudo).
+pub fn init_database(db_path: String, raw_key_hex: Option<String>) -> anyhow::Result<bool> {
+    let zero_key = raw_key_hex.map(zeroize::Zeroizing::new);
+    let _conn = store::open(&db_path, zero_key.as_ref())
+        .map_err(|e| anyhow::anyhow!("init_database: {e}"))?;
+    Ok(true)
+}
+
 /// Guarda la propuesta confirmada. `db_path` = archivo SQLite en la app.
 #[allow(clippy::too_many_arguments)]
 pub fn confirm_movement(
@@ -125,20 +133,20 @@ pub fn confirm_movement(
     descripcion: String,
     fecha: String,
     frase: String,
-) -> anyhow::Result<i64> {
+) -> anyhow::Result<String> {
     let t = match tipo.as_str() {
         "gasto" => TipoMovimiento::Gasto,
         "ingreso" => TipoMovimiento::Ingreso,
         other => anyhow::bail!("tipo inválido: {other}"),
     };
-    let conn = store::open(&db_path).map_err(|e| anyhow::anyhow!("{e}"))?;
+    let conn = store::open_default(&db_path).map_err(|e| anyhow::anyhow!("{e}"))?;
     store::insert(&conn, &t, monto, &moneda, &categoria, &descripcion, &fecha, &frase)
         .map_err(|e| anyhow::anyhow!("{e}"))
 }
 
 /// Últimos movimientos para la lista.
 pub fn list_movements(db_path: String, limit: i64) -> anyhow::Result<Vec<MovementDto>> {
-    let conn = store::open(&db_path).map_err(|e| anyhow::anyhow!("{e}"))?;
+    let conn = store::open_default(&db_path).map_err(|e| anyhow::anyhow!("{e}"))?;
     Ok(store::list(&conn, limit)
         .map_err(|e| anyhow::anyhow!("{e}"))?
         .into_iter()

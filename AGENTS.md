@@ -7,7 +7,7 @@ Leé `CONTEXT.md` primero. Acá van las reglas que salieron de romper cosas.
 - Español rioplatense, voseo, conciso. Nada de superlativos ni emojis.
 - Responder con hechos verificados (correr código, no suponer).
 - Preguntar antes de: cambiar etiquetas del dataset, entrenar (>30 min GPU),
-  pushear a remoto, borrar archivos.
+  borrar archivos.
 
 ## Entorno (fish + uv, NO estándar)
 
@@ -64,7 +64,7 @@ Leé `CONTEXT.md` primero. Acá van las reglas que salieron de romper cosas.
   - `cargo test` debe compilar y pasar sin errores ni warnings críticos si se tocó `core/`.
   - `.venv/bin/python -m unittest` debe pasar si se tocó `prototype/`.
   - Prohibido dejar archivos temporales, dumps de debug o archivos sin trackear no deseados.
-- **Siempre preguntar al usuario antes de pushear a remoto o mergear a `main`**.
+- **Push y PRs**: Permitido pushear ramas de trabajo y crear/mergear PRs a `main` si todos los checks y tests pasan limpiamente.
 
 ## Código
 
