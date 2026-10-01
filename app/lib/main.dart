@@ -1,14 +1,11 @@
-import 'dart:io';
-
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-import 'package:path_provider/path_provider.dart';
-import 'package:permission_handler/permission_handler.dart';
 import 'src/auth/onboarding_vault_screen.dart';
 import 'src/auth/unlock_screen.dart';
 import 'src/auth/vault_service.dart';
-import 'src/rust/api.dart/api.dart';
 import 'src/rust/api.dart/frb_generated.dart';
+import 'src/screens/accounts_tab.dart';
+import 'src/screens/home_tab.dart';
+import 'src/screens/recurring_tab.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -89,16 +86,6 @@ class _RootGateState extends State<RootGate> {
   }
 }
 
-class PendingProposal {
-  final String texto;
-  final ProposalDto propuesta;
-  PendingProposal(this.texto, this.propuesta);
-
-  String get resumen =>
-      'IA propone: ${propuesta.tipo} \$${propuesta.monto.toStringAsFixed(0)} '
-      '[${propuesta.categoria}] grounded=${propuesta.grounded ? "sí" : "NO"}';
-}
-
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
   @override
@@ -106,208 +93,51 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  static const _stt = MethodChannel('moneyneedle/stt');
-  final _controller = TextEditingController();
-  PendingProposal? _pending;
-  List<MovementDto> _movimientos = [];
-  bool _escuchando = false;
+  int _currentTabIndex = 0;
 
-  @override
-  void initState() {
-    super.initState();
-    _recargar();
-  }
-
-  Future<String> _dbPath() async {
-    final dir = await getApplicationDocumentsDirectory();
-    return '${dir.path}/moneyneedle.db';
-  }
-
-  Future<void> _recargar() async {
-    try {
-      final movs = await listMovements(dbPath: await _dbPath(), limit: 50);
-      if (!mounted) return;
-      setState(() => _movimientos = movs);
-    } catch (_) {
-      // DB aún no creada: lista vacía.
-    }
-  }
-
-  Future<void> _proponer() async {
-    final texto = _controller.text.trim();
-    if (texto.isEmpty) return;
-    final fecha =
-        DateTime.now().toIso8601String().substring(0, 10);
-    try {
-      // Engine real si el .cact está bunddeado; si no, mock.
-      ProposalDto p;
-      try {
-        p = await proposeReal(
-          query: texto,
-          fechaHoy: fecha,
-          cactPath: await _cactPath(),
-        );
-      } catch (_) {
-        p = await proposeMocked(query: texto, fechaHoy: fecha);
-      }
-      setState(() {
-        _pending = PendingProposal(texto, p);
-      });
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error del core: $e')),
-      );
-    }
-  }
-
-  /// Copia el asset a un archivo real (el engine necesita path, no bundle).
-  /// Si no hay asset bunddeado, lanza y el llamador usa el mock.
-  Future<String> _cactPath() async {
-    final bytes = await rootBundle.load('assets/models/tuned2.cact');
-    final dir = await getApplicationDocumentsDirectory();
-    final f = File('${dir.path}/tuned2.cact');
-    if (!await f.exists()) {
-      await f.writeAsBytes(bytes.buffer.asUint8List());
-    }
-    return f.path;
-  }
-
-  /// Voz → texto → propuesta. Pide permiso de mic si hace falta.
-  Future<void> _escuchar() async {
-    if (_escuchando) return;
-    var permiso = await Permission.microphone.status;
-    if (!permiso.isGranted) {
-      permiso = await Permission.microphone.request();
-    }
-    if (!permiso.isGranted) {
-      if (!mounted) return;
-      final bloqueado = permiso.isPermanentlyDenied;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(bloqueado
-              ? 'Mic bloqueado: activalo en Ajustes → Apps → MoneyNeedle'
-              : 'Sin micrófono no puedo escucharte'),
-          action: bloqueado
-              // ignore: prefer_const_constructors
-              ? SnackBarAction(
-                  label: 'Ajustes', onPressed: openAppSettings)
-              : null,
-        ),
-      );
-      return;
-    }
-    setState(() => _escuchando = true);
-    try {
-      final texto = await _stt.invokeMethod<String>('listen');
-      if (texto != null && texto.trim().isNotEmpty && mounted) {
-        _controller.text = texto.trim();
-        await _proponer();
-      }
-    } on PlatformException catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('No te entendí (${e.code}). Probá de nuevo.')),
-      );
-    } finally {
-      if (mounted) setState(() => _escuchando = false);
-    }
-  }
-
-  Future<void> _confirmar() async {
-    final pend = _pending;
-    if (pend == null) return;
-    setState(() => _pending = null);
-    try {
-      await confirmMovement(
-        dbPath: await _dbPath(),
-        tipo: pend.propuesta.tipo,
-        monto: pend.propuesta.monto,
-        moneda: pend.propuesta.moneda,
-        categoria: pend.propuesta.categoria,
-        descripcion: pend.texto,
-        fecha: pend.propuesta.fecha,
-        frase: pend.texto,
-      );
-      _controller.clear();
-      await _recargar();
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('No se pudo guardar: $e')),
-      );
-    }
-  }
+  final List<Widget> _tabs = const [
+    HomeTab(),
+    AccountsTab(),
+    RecurringTab(),
+  ];
 
   @override
   Widget build(BuildContext context) {
+    final titles = [
+      'MoneyNeedle 🌵',
+      'Cuentas y Tarjetas',
+      'Suscripciones y Recurrentes',
+    ];
+
     return Scaffold(
-      appBar: AppBar(title: const Text('MoneyNeedle 🌵')),
-      body: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          children: [
-            Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: _controller,
-                    decoration: const InputDecoration(
-                      hintText: 'gasté 5000 en súper...',
-                      border: OutlineInputBorder(),
-                    ),
-                    onSubmitted: (_) => _proponer(),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                IconButton(
-                  icon: Icon(_escuchando ? Icons.graphic_eq : Icons.mic),
-                  // STT nativo (offline-first) → texto → propuesta automática.
-                  onPressed: _escuchar,
-                ),
-                const SizedBox(width: 4),
-                FilledButton(onPressed: _proponer, child: const Text('OK')),
-              ],
-            ),
-            if (_pending != null)
-              Card(
-                child: ListTile(
-                  title: Text(_pending!.resumen),
-                  subtitle: Text(_pending!.texto),
-                  trailing: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      IconButton(
-                        icon: const Icon(Icons.close),
-                        onPressed: () => setState(() => _pending = null),
-                      ),
-                      FilledButton(
-                        onPressed: _confirmar,
-                        child: const Text('Confirmar'),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            const SizedBox(height: 12),
-            Expanded(
-              child: ListView.builder(
-                itemCount: _movimientos.length,
-                itemBuilder: (c, i) {
-                  final m = _movimientos[i];
-                  return ListTile(
-                    leading: Icon(m.tipo == 'gasto'
-                        ? Icons.arrow_upward
-                        : Icons.arrow_downward),
-                    title: Text(
-                        '${m.tipo} \$${m.monto.toStringAsFixed(0)} ${m.moneda}'),
-                    subtitle: Text('${m.categoria} · ${m.fecha}'),
-                  );
-                },
-              ),
-            ),
-          ],
-        ),
+      appBar: AppBar(
+        title: Text(titles[_currentTabIndex]),
+        elevation: 0,
+      ),
+      body: IndexedStack(
+        index: _currentTabIndex,
+        children: _tabs,
+      ),
+      bottomNavigationBar: NavigationBar(
+        selectedIndex: _currentTabIndex,
+        onDestinationSelected: (index) => setState(() => _currentTabIndex = index),
+        destinations: const [
+          NavigationDestination(
+            icon: Icon(Icons.chat_bubble_outline),
+            selectedIcon: Icon(Icons.chat_bubble),
+            label: 'Inicio',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.account_balance_wallet_outlined),
+            selectedIcon: Icon(Icons.account_balance_wallet),
+            label: 'Cuentas',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.autorenew_outlined),
+            selectedIcon: Icon(Icons.autorenew),
+            label: 'Recurrentes',
+          ),
+        ],
       ),
     );
   }
