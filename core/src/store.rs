@@ -5,7 +5,7 @@
 //! y exportación para reentrenamiento de Cactus Needle.
 
 use rusqlite::{params, Connection, OptionalExtension};
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 use std::sync::{Mutex, OnceLock};
 use std::time::{SystemTime, UNIX_EPOCH};
 use uuid::Uuid;
@@ -1439,6 +1439,325 @@ mod chrono_mock {
     }
 }
 
+// ============================================================================
+// Métricas, Analítica y Reportes (Fase 4)
+// ============================================================================
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct CategorySpendingItem {
+    pub category_id: Option<String>,
+    pub name: String,
+    pub color: String,
+    pub icon: String,
+    pub total_cents: i64,
+    pub percentage: f64,
+    pub transaction_count: i32,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct CategorySpendingReport {
+    pub currency: String,
+    pub total_cents: i64,
+    pub items: Vec<CategorySpendingItem>,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct MonthlyCashflowItem {
+    pub year: i32,
+    pub month: i32,
+    pub income_cents: i64,
+    pub expense_cents: i64,
+    pub net_cents: i64,
+    pub currency: String,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct InstallmentProjectionItem {
+    pub cycle_year: i32,
+    pub cycle_month: i32,
+    pub total_cents: i64,
+    pub count: i32,
+    pub currency: String,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct FinancialKpis {
+    pub total_income_cents: i64,
+    pub total_expense_cents: i64,
+    pub net_savings_cents: i64,
+    pub savings_rate: f64,
+    pub top_category_name: Option<String>,
+    pub top_category_cents: Option<i64>,
+}
+
+/// Reporte de gastos desglosados por categoría para un rango de fechas y moneda.
+pub fn get_category_spending_report(
+    conn: &Connection,
+    start_ms: i64,
+    end_ms: i64,
+    currency: &str,
+) -> Result<CategorySpendingReport, String> {
+    let mut stmt = conn
+        .prepare(
+            "SELECT
+                t.category_id,
+                COALESCE(MAX(c.name), 'Sin categoría'),
+                COALESCE(MAX(c.color), '#9E9E9E'),
+                COALESCE(MAX(c.icon), 'category'),
+                SUM(t.amount) as cat_total,
+                COUNT(t.id) as tx_count
+             FROM transactions t
+             LEFT JOIN categories c ON t.category_id = c.id
+             WHERE t.deleted_at IS NULL
+               AND t.currency = ?1
+               AND t.transaction_type = 'expense'
+               AND t.date >= ?2
+               AND t.date <= ?3
+             GROUP BY t.category_id
+             ORDER BY cat_total DESC",
+        )
+        .map_err(|e| e.to_string())?;
+
+    let rows = stmt
+        .query_map(params![currency, start_ms, end_ms], |row| {
+            let cat_id_raw: Option<Vec<u8>> = row.get(0)?;
+            let cat_id_str = cat_id_raw.and_then(|raw| {
+                if raw.len() == 16 {
+                    let mut b = [0u8; 16];
+                    b.copy_from_slice(&raw);
+                    Some(Uuid::from_bytes(b).to_string())
+                } else {
+                    None
+                }
+            });
+            let name: String = row.get(1)?;
+            let color: String = row.get(2)?;
+            let icon: String = row.get(3)?;
+            let total_cents: i64 = row.get(4)?;
+            let count: i32 = row.get(5)?;
+
+            Ok((cat_id_str, name, color, icon, total_cents, count))
+        })
+        .map_err(|e| e.to_string())?;
+
+    let mut raw_items = Vec::new();
+    let mut grand_total: i64 = 0;
+    for r in rows {
+        let item = r.map_err(|e| e.to_string())?;
+        grand_total += item.4;
+        raw_items.push(item);
+    }
+
+    let items = raw_items
+        .into_iter()
+        .map(|(id, name, color, icon, cents, count)| {
+            let pct = if grand_total > 0 {
+                ((cents as f64 / grand_total as f64) * 10000.0).round() / 100.0
+            } else {
+                0.0
+            };
+            CategorySpendingItem {
+                category_id: id,
+                name,
+                color,
+                icon,
+                total_cents: cents,
+                percentage: pct,
+                transaction_count: count,
+            }
+        })
+        .collect();
+
+    Ok(CategorySpendingReport {
+        currency: currency.to_string(),
+        total_cents: grand_total,
+        items,
+    })
+}
+
+/// Historial mensual de flujo de caja (ingresos vs gastos) para los últimos `months_limit` meses.
+pub fn get_monthly_cashflow(
+    conn: &Connection,
+    currency: &str,
+    months_limit: i32,
+) -> Result<Vec<MonthlyCashflowItem>, String> {
+    let mut stmt = conn
+        .prepare(
+            "SELECT transaction_type, amount, date
+             FROM transactions
+             WHERE deleted_at IS NULL
+               AND currency = ?1
+               AND transaction_type IN ('expense', 'income')
+             ORDER BY date ASC",
+        )
+        .map_err(|e| e.to_string())?;
+
+    let rows = stmt
+        .query_map(params![currency], |row| {
+            let ttype: String = row.get(0)?;
+            let amount: i64 = row.get(1)?;
+            let date_ms: i64 = row.get(2)?;
+            Ok((ttype, amount, date_ms))
+        })
+        .map_err(|e| e.to_string())?;
+
+    let mut month_map: BTreeMap<(i32, i32), (i64, i64)> = BTreeMap::new();
+
+    for r in rows {
+        let (ttype, amount, date_ms) = r.map_err(|e| e.to_string())?;
+        let secs = (date_ms.max(0) / 1000) as u64;
+        let d = chrono_mock::NaiveDate::from_timestamp_opt(secs);
+        let entry = month_map.entry((d.year, d.month as i32)).or_insert((0, 0));
+        match ttype.as_str() {
+            "income" => entry.0 += amount,
+            "expense" => entry.1 += amount,
+            _ => {}
+        }
+    }
+
+    let all_items: Vec<MonthlyCashflowItem> = month_map
+        .into_iter()
+        .map(|((y, m), (inc, exp))| MonthlyCashflowItem {
+            year: y,
+            month: m,
+            income_cents: inc,
+            expense_cents: exp,
+            net_cents: inc - exp,
+            currency: currency.to_string(),
+        })
+        .collect();
+
+    let limit = months_limit.max(1) as usize;
+    if all_items.len() > limit {
+        let skip = all_items.len() - limit;
+        Ok(all_items.into_iter().skip(skip).collect())
+    } else {
+        Ok(all_items)
+    }
+}
+
+/// Proyección de compromisos de cuotas de tarjetas de crédito pendientes agrupadas por ciclo.
+pub fn get_installment_projections(
+    conn: &Connection,
+    currency: &str,
+) -> Result<Vec<InstallmentProjectionItem>, String> {
+    let mut stmt = conn
+        .prepare(
+            "SELECT i.cycle_year, i.cycle_month, SUM(i.amount), COUNT(i.id)
+             FROM installments i
+             JOIN accounts a ON i.account_id = a.id
+             WHERE i.deleted_at IS NULL AND i.status = 'pending' AND a.currency = ?1
+             GROUP BY i.cycle_year, i.cycle_month
+             ORDER BY i.cycle_year ASC, i.cycle_month ASC",
+        )
+        .map_err(|e| e.to_string())?;
+
+    let rows = stmt
+        .query_map(params![currency], |row| {
+            let y: i32 = row.get(0)?;
+            let m: i32 = row.get(1)?;
+            let total: i64 = row.get(2)?;
+            let count: i32 = row.get(3)?;
+            Ok(InstallmentProjectionItem {
+                cycle_year: y,
+                cycle_month: m,
+                total_cents: total,
+                count,
+                currency: currency.to_string(),
+            })
+        })
+        .map_err(|e| e.to_string())?;
+
+    let mut out = Vec::new();
+    for r in rows {
+        out.push(r.map_err(|e| e.to_string())?);
+    }
+    Ok(out)
+}
+
+/// KPIs financieros del período (ingresos, gastos, superávit/déficit, tasa de ahorro y categoría líder).
+pub fn get_financial_kpis(
+    conn: &Connection,
+    start_ms: i64,
+    end_ms: i64,
+    currency: &str,
+) -> Result<FinancialKpis, String> {
+    let mut stmt = conn
+        .prepare(
+            "SELECT transaction_type, SUM(amount)
+             FROM transactions
+             WHERE deleted_at IS NULL
+               AND currency = ?1
+               AND transaction_type IN ('expense', 'income')
+               AND date >= ?2
+               AND date <= ?3
+             GROUP BY transaction_type",
+        )
+        .map_err(|e| e.to_string())?;
+
+    let mut income = 0i64;
+    let mut expense = 0i64;
+
+    let rows = stmt
+        .query_map(params![currency, start_ms, end_ms], |row| {
+            let ttype: String = row.get(0)?;
+            let sum: i64 = row.get(1)?;
+            Ok((ttype, sum))
+        })
+        .map_err(|e| e.to_string())?;
+
+    for r in rows {
+        let (ttype, sum) = r.map_err(|e| e.to_string())?;
+        match ttype.as_str() {
+            "income" => income += sum,
+            "expense" => expense += sum,
+            _ => {}
+        }
+    }
+
+    let net = income - expense;
+    let savings_rate = if income > 0 {
+        ((net as f64 / income as f64) * 10000.0).round() / 100.0
+    } else {
+        0.0
+    };
+
+    let top = conn
+        .query_row(
+            "SELECT
+                COALESCE(MAX(c.name), 'Sin categoría'),
+                SUM(t.amount) as cat_total
+             FROM transactions t
+             LEFT JOIN categories c ON t.category_id = c.id
+             WHERE t.deleted_at IS NULL
+               AND t.currency = ?1
+               AND t.transaction_type = 'expense'
+               AND t.date >= ?2
+               AND t.date <= ?3
+             GROUP BY t.category_id
+             ORDER BY cat_total DESC
+             LIMIT 1",
+            params![currency, start_ms, end_ms],
+            |r| Ok((r.get::<_, String>(0)?, r.get::<_, i64>(1)?)),
+        )
+        .optional()
+        .map_err(|e| e.to_string())?;
+
+    let (top_name, top_cents) = match top {
+        Some((name, cents)) => (Some(name), Some(cents)),
+        None => (None, None),
+    };
+
+    Ok(FinancialKpis {
+        total_income_cents: income,
+        total_expense_cents: expense,
+        net_savings_cents: net,
+        savings_rate,
+        top_category_name: top_name,
+        top_category_cents: top_cents,
+    })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1678,4 +1997,121 @@ mod tests {
 
         let _ = std::fs::remove_file(db_file);
     }
+
+    #[test]
+    fn test_analytics_and_metrics_reports() {
+        let conn = mem();
+        let accounts = list_accounts(&conn).unwrap();
+        let cash = &accounts[0];
+        let cash_uuid = Uuid::parse_str(&cash.id).unwrap();
+        let cash_bytes = cash_uuid.as_bytes();
+        let now = now_ms();
+        let start_ms = now - 86400 * 1000;
+        let end_ms = now + 86400 * 1000;
+
+        // Categorías
+        let cat_super_id = get_or_create_category(&conn, "Supermercado").unwrap();
+        let cat_transp_id = get_or_create_category(&conn, "Transporte").unwrap();
+
+        // 1. Ingreso de 500.000 ARS
+        insert_with_account(
+            &conn,
+            Some(cash_bytes),
+            &Ingreso,
+            500000.0,
+            "ARS",
+            "sueldo",
+            "Sueldo mensual",
+            "2026-09-30",
+            "sueldo",
+        ).unwrap();
+
+        // 2. Gastos categorizados
+        let mut conn_mut = conn;
+        let tx = conn_mut.transaction().unwrap();
+        let tx1_id = Uuid::now_v7();
+        tx.execute(
+            "INSERT INTO transactions (id, account_id, category_id, transaction_type, amount, currency, notes, date, raw_prompt, created_at, updated_at)
+             VALUES (?1, ?2, ?3, 'expense', 5000000, 'ARS', 'Compras coto', ?4, 'coto 50k', ?4, ?4)",
+            params![tx1_id.as_bytes().as_slice(), cash_bytes.as_slice(), cat_super_id.as_slice(), now],
+        ).unwrap();
+        // Gasto 2: 25.000 ARS en Transporte
+        let tx2_id = Uuid::now_v7();
+        tx.execute(
+            "INSERT INTO transactions (id, account_id, category_id, transaction_type, amount, currency, notes, date, raw_prompt, created_at, updated_at)
+             VALUES (?1, ?2, ?3, 'expense', 2500000, 'ARS', 'Carga sube', ?4, 'sube 25k', ?4, ?4)",
+            params![tx2_id.as_bytes().as_slice(), cash_bytes.as_slice(), cat_transp_id.as_slice(), now],
+        ).unwrap();
+        tx.commit().unwrap();
+        let conn = conn_mut;
+
+        // Test Category Spending Report
+        let cat_report = get_category_spending_report(&conn, start_ms, end_ms, "ARS").unwrap();
+        assert_eq!(cat_report.currency, "ARS");
+        assert_eq!(cat_report.total_cents, 7500000);
+        assert_eq!(cat_report.items.len(), 2);
+        assert_eq!(cat_report.items[0].name, "supermercado");
+        assert_eq!(cat_report.items[0].total_cents, 5000000);
+        assert_eq!(cat_report.items[0].percentage, 66.67);
+        assert_eq!(cat_report.items[1].name, "transporte");
+        assert_eq!(cat_report.items[1].total_cents, 2500000);
+        assert_eq!(cat_report.items[1].percentage, 33.33);
+
+        // Test KPIs
+        let kpis = get_financial_kpis(&conn, start_ms, end_ms, "ARS").unwrap();
+        assert_eq!(kpis.total_income_cents, 50000000);
+        assert_eq!(kpis.total_expense_cents, 7500000);
+        assert_eq!(kpis.net_savings_cents, 42500000);
+        assert_eq!(kpis.savings_rate, 85.0);
+        assert_eq!(kpis.top_category_name.as_deref(), Some("supermercado"));
+        assert_eq!(kpis.top_category_cents, Some(5000000));
+
+        // Test Monthly Cashflow
+        let cashflow = get_monthly_cashflow(&conn, "ARS", 6).unwrap();
+        assert!(!cashflow.is_empty());
+        let last_cf = cashflow.last().unwrap();
+        assert_eq!(last_cf.income_cents, 50000000);
+        assert_eq!(last_cf.expense_cents, 7500000);
+        assert_eq!(last_cf.net_cents, 42500000);
+
+        // Test Installments Projection con tarjeta de crédito
+        let card_id_str = create_account(
+            &conn,
+            "Visa Test",
+            &AccountType::CreditCard,
+            "ARS",
+            0,
+            Some(100000000),
+            Some(20),
+            Some(10),
+            "#000000",
+            "credit_card",
+        ).unwrap();
+        let card_uuid = Uuid::parse_str(&card_id_str).unwrap();
+
+        insert_credit_purchase(
+            &conn,
+            card_uuid.as_bytes(),
+            Some(&cat_super_id),
+            3000000, // 30.000 ARS en 3 cuotas de 10.000
+            3,
+            now,
+            2026,
+            10,
+            "Super en 3 cuotas",
+            "super 3 cuotas",
+        ).unwrap();
+
+        let proj = get_installment_projections(&conn, "ARS").unwrap();
+        assert_eq!(proj.len(), 3);
+        assert_eq!(proj[0].cycle_year, 2026);
+        assert_eq!(proj[0].cycle_month, 10);
+        assert_eq!(proj[0].total_cents, 1000000);
+        assert_eq!(proj[1].cycle_month, 11);
+        assert_eq!(proj[1].total_cents, 1000000);
+        assert_eq!(proj[2].cycle_month, 12);
+        assert_eq!(proj[2].total_cents, 1000000);
+    }
 }
+
+

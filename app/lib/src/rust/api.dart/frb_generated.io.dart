@@ -46,16 +46,31 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   CardStatementItemDto dco_decode_card_statement_item_dto(dynamic raw);
 
   @protected
+  CashflowItemDto dco_decode_cashflow_item_dto(dynamic raw);
+
+  @protected
+  CategoryReportDto dco_decode_category_report_dto(dynamic raw);
+
+  @protected
+  CategorySpendingDto dco_decode_category_spending_dto(dynamic raw);
+
+  @protected
   ExchangeRateDto dco_decode_exchange_rate_dto(dynamic raw);
 
   @protected
   double dco_decode_f_64(dynamic raw);
 
   @protected
+  FinancialKpisDto dco_decode_financial_kpis_dto(dynamic raw);
+
+  @protected
   int dco_decode_i_32(dynamic raw);
 
   @protected
   PlatformInt64 dco_decode_i_64(dynamic raw);
+
+  @protected
+  InstallmentProjectionDto dco_decode_installment_projection_dto(dynamic raw);
 
   @protected
   List<AccountDto> dco_decode_list_account_dto(dynamic raw);
@@ -65,7 +80,17 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
       dynamic raw);
 
   @protected
+  List<CashflowItemDto> dco_decode_list_cashflow_item_dto(dynamic raw);
+
+  @protected
+  List<CategorySpendingDto> dco_decode_list_category_spending_dto(dynamic raw);
+
+  @protected
   List<ExchangeRateDto> dco_decode_list_exchange_rate_dto(dynamic raw);
+
+  @protected
+  List<InstallmentProjectionDto> dco_decode_list_installment_projection_dto(
+      dynamic raw);
 
   @protected
   List<MovementDto> dco_decode_list_movement_dto(dynamic raw);
@@ -136,16 +161,34 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
       SseDeserializer deserializer);
 
   @protected
+  CashflowItemDto sse_decode_cashflow_item_dto(SseDeserializer deserializer);
+
+  @protected
+  CategoryReportDto sse_decode_category_report_dto(
+      SseDeserializer deserializer);
+
+  @protected
+  CategorySpendingDto sse_decode_category_spending_dto(
+      SseDeserializer deserializer);
+
+  @protected
   ExchangeRateDto sse_decode_exchange_rate_dto(SseDeserializer deserializer);
 
   @protected
   double sse_decode_f_64(SseDeserializer deserializer);
 
   @protected
+  FinancialKpisDto sse_decode_financial_kpis_dto(SseDeserializer deserializer);
+
+  @protected
   int sse_decode_i_32(SseDeserializer deserializer);
 
   @protected
   PlatformInt64 sse_decode_i_64(SseDeserializer deserializer);
+
+  @protected
+  InstallmentProjectionDto sse_decode_installment_projection_dto(
+      SseDeserializer deserializer);
 
   @protected
   List<AccountDto> sse_decode_list_account_dto(SseDeserializer deserializer);
@@ -155,7 +198,19 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
       SseDeserializer deserializer);
 
   @protected
+  List<CashflowItemDto> sse_decode_list_cashflow_item_dto(
+      SseDeserializer deserializer);
+
+  @protected
+  List<CategorySpendingDto> sse_decode_list_category_spending_dto(
+      SseDeserializer deserializer);
+
+  @protected
   List<ExchangeRateDto> sse_decode_list_exchange_rate_dto(
+      SseDeserializer deserializer);
+
+  @protected
+  List<InstallmentProjectionDto> sse_decode_list_installment_projection_dto(
       SseDeserializer deserializer);
 
   @protected
@@ -231,6 +286,18 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
       CardStatementItemDto self, SseSerializer serializer);
 
   @protected
+  void sse_encode_cashflow_item_dto(
+      CashflowItemDto self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_category_report_dto(
+      CategoryReportDto self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_category_spending_dto(
+      CategorySpendingDto self, SseSerializer serializer);
+
+  @protected
   void sse_encode_exchange_rate_dto(
       ExchangeRateDto self, SseSerializer serializer);
 
@@ -238,10 +305,18 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_encode_f_64(double self, SseSerializer serializer);
 
   @protected
+  void sse_encode_financial_kpis_dto(
+      FinancialKpisDto self, SseSerializer serializer);
+
+  @protected
   void sse_encode_i_32(int self, SseSerializer serializer);
 
   @protected
   void sse_encode_i_64(PlatformInt64 self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_installment_projection_dto(
+      InstallmentProjectionDto self, SseSerializer serializer);
 
   @protected
   void sse_encode_list_account_dto(
@@ -252,8 +327,20 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
       List<CardStatementItemDto> self, SseSerializer serializer);
 
   @protected
+  void sse_encode_list_cashflow_item_dto(
+      List<CashflowItemDto> self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_list_category_spending_dto(
+      List<CategorySpendingDto> self, SseSerializer serializer);
+
+  @protected
   void sse_encode_list_exchange_rate_dto(
       List<ExchangeRateDto> self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_list_installment_projection_dto(
+      List<InstallmentProjectionDto> self, SseSerializer serializer);
 
   @protected
   void sse_encode_list_movement_dto(

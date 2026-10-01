@@ -6,6 +6,7 @@ import 'src/rust/api.dart/frb_generated.dart';
 import 'src/screens/accounts_tab.dart';
 import 'src/screens/home_tab.dart';
 import 'src/screens/recurring_tab.dart';
+import 'src/screens/metrics_tab.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -99,6 +100,7 @@ class _HomePageState extends State<HomePage> {
     HomeTab(),
     AccountsTab(),
     RecurringTab(),
+    MetricsTab(),
   ];
 
   @override
@@ -107,6 +109,7 @@ class _HomePageState extends State<HomePage> {
       'MoneyNeedle 🌵',
       'Cuentas y Tarjetas',
       'Suscripciones y Recurrentes',
+      'Analítica y Métricas',
     ];
 
     return Scaffold(
@@ -136,6 +139,11 @@ class _HomePageState extends State<HomePage> {
             icon: Icon(Icons.autorenew_outlined),
             selectedIcon: Icon(Icons.autorenew),
             label: 'Recurrentes',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.insights_outlined),
+            selectedIcon: Icon(Icons.insights),
+            label: 'Métricas',
           ),
         ],
       ),
