@@ -236,6 +236,61 @@ pub fn now_ms() -> i64 {
         .as_millis() as i64
 }
 
+fn is_plain_sqlite_file(path: &str) -> bool {
+    if let Ok(mut f) = std::fs::File::open(path) {
+        use std::io::Read;
+        let mut magic = [0u8; 16];
+        if f.read_exact(&mut magic).is_ok() {
+            return &magic == b"SQLite format 3\0";
+        }
+    }
+    false
+}
+
+fn migrate_legacy_movements(legacy: &Connection, encrypted: &Connection) -> Result<(), String> {
+    let has_table: bool = legacy
+        .query_row(
+            "SELECT count(*) FROM sqlite_master WHERE type='table' AND name='movements'",
+            [],
+            |r| Ok(r.get::<_, i64>(0)? > 0),
+        )
+        .unwrap_or(false);
+
+    if !has_table {
+        return Ok(());
+    }
+
+    let mut stmt = legacy
+        .prepare("SELECT tipo, monto, moneda, categoria, descripcion, fecha, frase FROM movements")
+        .map_err(|e| e.to_string())?;
+
+    let rows = stmt
+        .query_map([], |r| {
+            Ok((
+                r.get::<_, String>(0)?,
+                r.get::<_, f64>(1)?,
+                r.get::<_, String>(2)?,
+                r.get::<_, String>(3)?,
+                r.get::<_, String>(4)?,
+                r.get::<_, String>(5)?,
+                r.get::<_, String>(6)?,
+            ))
+        })
+        .map_err(|e| e.to_string())?;
+
+    for row in rows {
+        if let Ok((tipo_str, monto, moneda, cat, desc, fecha, frase)) = row {
+            let t = match tipo_str.as_str() {
+                "ingreso" => TipoMovimiento::Ingreso,
+                _ => TipoMovimiento::Gasto,
+            };
+            let _ = insert(encrypted, &t, monto, &moneda, &cat, &desc, &fecha, &frase);
+        }
+    }
+
+    Ok(())
+}
+
 /// Abre (o crea) la DB SQLite con o sin clave SQLCipher y aplica migraciones.
 pub fn open(
     db_path: &str,
@@ -243,6 +298,29 @@ pub fn open(
 ) -> Result<Connection, String> {
     if db_path != ":memory:" && !db_path.is_empty() {
         let _ = migrations::backup_database_file(db_path);
+    }
+
+    // Si el archivo ya existía pero es SQLite plano (legacy) y ahora recibimos clave SQLCipher:
+    if let Some(key) = raw_hex_key {
+        let clean_key = key.trim();
+        if !clean_key.is_empty() && db_path != ":memory:" && !db_path.is_empty() && is_plain_sqlite_file(db_path) {
+            let legacy_backup_path = format!("{}.legacy_plain_{}", db_path, now_ms());
+            std::fs::rename(db_path, &legacy_backup_path)
+                .map_err(|e| format!("Error al respaldar DB plana legacy: {e}"))?;
+
+            let mut conn = Connection::open(db_path).map_err(|e| e.to_string())?;
+            conn.execute_batch(&format!("PRAGMA key = \"x'{}'\";", clean_key))
+                .map_err(|e| format!("Error al aplicar clave SQLCipher: {e}"))?;
+
+            migrations::run_migrations(&mut conn)?;
+            ensure_default_accounts_and_categories(&conn)?;
+
+            if let Ok(legacy_conn) = Connection::open(&legacy_backup_path) {
+                let _ = migrate_legacy_movements(&legacy_conn, &conn);
+            }
+
+            return Ok(conn);
+        }
     }
 
     let mut conn = Connection::open(db_path).map_err(|e| e.to_string())?;
@@ -719,7 +797,7 @@ pub fn list(conn: &Connection, limit: i64) -> Result<Vec<Movement>, String> {
              FROM transactions t
              LEFT JOIN categories c ON t.category_id = c.id
              WHERE t.deleted_at IS NULL
-             ORDER BY t.date DESC, t.created_at DESC
+             ORDER BY t.date DESC, t.created_at DESC, t.rowid DESC
              LIMIT ?1",
         )
         .map_err(|e| e.to_string())?;
@@ -736,6 +814,12 @@ pub fn list(conn: &Connection, limit: i64) -> Result<Vec<Movement>, String> {
             };
 
             let ttype: String = row.get(1)?;
+            let tipo_ui = match ttype.as_str() {
+                "income" | "ingreso" => "ingreso",
+                "expense" | "gasto" => "gasto",
+                "transfer" | "transferencia" => "transferencia",
+                other => other,
+            }.to_string();
             let centavos: i64 = row.get(2)?;
             let moneda: String = row.get(3)?;
             let cat: String = row.get(4)?;
@@ -748,7 +832,7 @@ pub fn list(conn: &Connection, limit: i64) -> Result<Vec<Movement>, String> {
 
             Ok(Movement {
                 id: id_str,
-                tipo: ttype,
+                tipo: tipo_ui,
                 monto: centavos as f64 / 100.0,
                 monto_centavos: centavos,
                 moneda,
@@ -1123,6 +1207,50 @@ mod tests {
             let list = list(&conn, 10).unwrap();
             assert_eq!(list.len(), 1);
             assert_eq!(list[0].monto, 1500.0);
+        }
+
+        let _ = std::fs::remove_file(db_file);
+    }
+
+    #[test]
+    fn migracion_automatica_de_base_plana_legacy() {
+        let db_file = "/tmp/moneyneedle_legacy_migrate_test.db";
+        let _ = std::fs::remove_file(db_file);
+
+        // 1. Crear una base plana como en el PR #5 viejo
+        {
+            let conn = Connection::open(db_file).unwrap();
+            conn.execute_batch(
+                "CREATE TABLE movements (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    tipo TEXT NOT NULL,
+                    monto REAL NOT NULL,
+                    moneda TEXT NOT NULL,
+                    categoria TEXT NOT NULL,
+                    descripcion TEXT NOT NULL,
+                    fecha TEXT NOT NULL,
+                    frase TEXT NOT NULL
+                );
+                INSERT INTO movements (tipo, monto, moneda, categoria, descripcion, fecha, frase)
+                VALUES ('ingreso', 100000.0, 'ARS', 'sueldo', 'cubre sueldo', '2026-09-30', 'sueldo');",
+            ).unwrap();
+        }
+
+        // 2. Abrir con clave SQLCipher: debe detectar base plana, migrar datos y abrir cifrado
+        let key = Zeroizing::new("1111222233334444111122223333444411112222333344441111222233334444".to_string());
+        {
+            let conn = open(db_file, Some(&key)).unwrap();
+            let all = list(&conn, 10).unwrap();
+            assert_eq!(all.len(), 1);
+            assert_eq!(all[0].tipo, "ingreso");
+            assert_eq!(all[0].monto, 100000.0);
+        }
+
+        // 3. Verificar que el archivo ahora está realmente cifrado (no plano)
+        {
+            let conn_unencrypted = Connection::open(db_file).unwrap();
+            let res = conn_unencrypted.execute("SELECT count(*) FROM transactions", []);
+            assert!(res.is_err(), "La base debe haber quedado cifrada con SQLCipher");
         }
 
         let _ = std::fs::remove_file(db_file);
