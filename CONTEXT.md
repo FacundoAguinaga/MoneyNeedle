@@ -18,10 +18,12 @@ dueño: Facundo. Fecha: sep-oct 2026.
   entrenar y medir; el chat Rust se descartó a propósito).
 - Modelo: `tuned2.cact` (48% exacto held-out). Corre en el teléfono a
   ~1248 tps prefill / 303 decode, 129MB RAM.
-- `main` al día (PRs #2-#7). Persistencia migrada a SQLCipher con modelo
-  relacional v1 y ciclo de seguridad completo: key wrapping con 12 palabras BIP-39,
-  Argon2id, AES-256-GCM y hardware Keystore con biometría en Flutter.
-- Siguiente paso: construir la app con el stack definido (ver abajo y `docs/stack.md`).
+- `main` al día (PRs #2-#12). Fases 1 a 4 completas:
+  - Fase 1: SQLCipher relacional (UUID v7, centavos i64) + BIP-39 / Argon2id / Keystore biométrico.
+  - Fase 2: Cuentas, tarjetas de crédito en cuotas y reglas recurrentes con UI multi-tab.
+  - Fase 3: Transferencias entre cuentas y cotizaciones multimoneda implícitas.
+  - Fase 4: Analítica, reportes de categorías, flujo mensual y proyección de cuotas con fl_chart.
+- Siguiente paso: Fase 5 (Presupuestos y metas) o Fase 6 (Exportación y backups cifrados).
 
 ## Stack definido (2026-09-30)
 
