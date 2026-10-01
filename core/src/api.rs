@@ -114,11 +114,18 @@ impl From<store::Movement> for MovementDto {
     }
 }
 
-/// Inicializa la base de datos con clave SQLCipher opcional (hex crudo).
+/// Inicializa la base de datos con clave SQLCipher opcional (hex crudo) y la guarda para la sesión activa.
 pub fn init_database(db_path: String, raw_key_hex: Option<String>) -> anyhow::Result<bool> {
     let zero_key = raw_key_hex.map(zeroize::Zeroizing::new);
     let _conn = store::open(&db_path, zero_key.as_ref())
         .map_err(|e| anyhow::anyhow!("init_database: {e}"))?;
+    store::set_active_key_for_path(&db_path, zero_key);
+    Ok(true)
+}
+
+/// Cierra y borra de memoria la clave activa de la sesión de base de datos para la ruta indicada.
+pub fn lock_database(db_path: String) -> anyhow::Result<bool> {
+    store::set_active_key_for_path(&db_path, None);
     Ok(true)
 }
 
@@ -568,6 +575,46 @@ mod tests {
         assert!(delete_account(db_path.clone(), card_id).unwrap());
         let accs_final = list_accounts(db_path.clone()).unwrap();
         assert_eq!(accs_final.len(), 1);
+
+        let _ = std::fs::remove_file(&db_path);
+    }
+
+    #[test]
+    fn api_sqlcipher_active_key_session_test() {
+        let db_path = format!("/tmp/test_api_cipher_{}.db", store::now_ms());
+        let _ = std::fs::remove_file(&db_path);
+
+        let master_key = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef".to_string();
+
+        // 1. Inicializar con clave SQLCipher
+        init_database(db_path.clone(), Some(master_key)).unwrap();
+
+        // 2. Operaciones subsecuentes deben usar la clave activa sin fallar
+        let accs = list_accounts(db_path.clone()).unwrap();
+        assert_eq!(accs.len(), 1);
+
+        let new_id = create_account(
+            db_path.clone(),
+            "Banco Galicia".into(),
+            "bank".into(),
+            "ARS".into(),
+            100_000.0,
+            None,
+            None,
+            None,
+            "#FF0000".into(),
+            "bank".into(),
+        )
+        .unwrap();
+        assert!(!new_id.is_empty());
+
+        let accs2 = list_accounts(db_path.clone()).unwrap();
+        assert_eq!(accs2.len(), 2);
+
+        // 3. Al bloquear (olvidar clave de sesión), abrir de nuevo debe fallar
+        lock_database(db_path.clone()).unwrap();
+        let res = list_accounts(db_path.clone());
+        assert!(res.is_err(), "Sin la clave de sesión, la base cifrada debe rechazar la apertura");
 
         let _ = std::fs::remove_file(&db_path);
     }
