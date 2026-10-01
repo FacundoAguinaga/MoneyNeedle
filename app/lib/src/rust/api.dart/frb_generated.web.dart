@@ -75,6 +75,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   double dco_decode_f_64(dynamic raw);
 
   @protected
+  FinancialInsightDto dco_decode_financial_insight_dto(dynamic raw);
+
+  @protected
   FinancialKpisDto dco_decode_financial_kpis_dto(dynamic raw);
 
   @protected
@@ -110,6 +113,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   List<ExchangeRateDto> dco_decode_list_exchange_rate_dto(dynamic raw);
+
+  @protected
+  List<FinancialInsightDto> dco_decode_list_financial_insight_dto(dynamic raw);
 
   @protected
   List<InstallmentProjectionDto> dco_decode_list_installment_projection_dto(
@@ -232,6 +238,10 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   double sse_decode_f_64(SseDeserializer deserializer);
 
   @protected
+  FinancialInsightDto sse_decode_financial_insight_dto(
+      SseDeserializer deserializer);
+
+  @protected
   FinancialKpisDto sse_decode_financial_kpis_dto(SseDeserializer deserializer);
 
   @protected
@@ -271,6 +281,10 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   List<ExchangeRateDto> sse_decode_list_exchange_rate_dto(
+      SseDeserializer deserializer);
+
+  @protected
+  List<FinancialInsightDto> sse_decode_list_financial_insight_dto(
       SseDeserializer deserializer);
 
   @protected
@@ -403,6 +417,10 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_encode_f_64(double self, SseSerializer serializer);
 
   @protected
+  void sse_encode_financial_insight_dto(
+      FinancialInsightDto self, SseSerializer serializer);
+
+  @protected
   void sse_encode_financial_kpis_dto(
       FinancialKpisDto self, SseSerializer serializer);
 
@@ -447,6 +465,10 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_list_exchange_rate_dto(
       List<ExchangeRateDto> self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_list_financial_insight_dto(
+      List<FinancialInsightDto> self, SseSerializer serializer);
 
   @protected
   void sse_encode_list_installment_projection_dto(

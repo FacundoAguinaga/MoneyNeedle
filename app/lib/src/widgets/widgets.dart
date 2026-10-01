@@ -8,5 +8,7 @@ export 'mn_kpi_card.dart';
 export 'mn_modal_sheet.dart';
 export 'mn_section_header.dart';
 export 'movement_list_item.dart';
+export 'insight_card.dart';
+export 'insights_carousel.dart';
 export 'nlp_proposal_card.dart';
 export 'quick_add_modal.dart';

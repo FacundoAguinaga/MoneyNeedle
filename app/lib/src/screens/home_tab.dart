@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import '../auth/vault_service.dart';
 import '../rust/api.dart/api.dart';
 import '../widgets/widgets.dart';
+import 'movement_detail_screen.dart';
 
 class PendingProposal {
   final String texto;
@@ -25,6 +26,7 @@ class HomeTabState extends State<HomeTab> {
   List<MovementDto> _movimientos = [];
   List<AccountDto> _accounts = [];
   List<CategoryDto> _categories = [];
+  List<FinancialInsightDto> _insights = [];
   PendingProposal? _pending;
   bool _loading = true;
   bool _confirmando = false;
@@ -55,6 +57,7 @@ class HomeTabState extends State<HomeTab> {
       final movs = await listMovements(dbPath: dbPath, limit: 50);
       final accs = await listAccounts(dbPath: dbPath);
       final cats = await listCategories(dbPath: dbPath);
+      final insights = await getFinancialInsights(dbPath: dbPath, currency: 'ARS');
 
       if (!mounted) return;
       setState(() {
@@ -63,6 +66,7 @@ class HomeTabState extends State<HomeTab> {
         _movimientos = movs;
         _accounts = accs;
         _categories = cats;
+        _insights = insights;
         _loading = false;
       });
     } catch (_) {
@@ -354,6 +358,13 @@ class HomeTabState extends State<HomeTab> {
             // Resumen Financiero Compacto
             _buildSummaryHeader(),
 
+            // Carrusel de Insights Accionables
+            if (_insights.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: InsightsCarousel(insights: _insights),
+              ),
+
             // Tarjeta de Propuesta Interactiva NLP (si está pendiente)
             if (_pending != null)
               Padding(
@@ -382,6 +393,17 @@ class HomeTabState extends State<HomeTab> {
                 movements: _movimientos,
                 onEmptyAction: _abrirQuickAdd,
                 onItemDismissed: _eliminarMovimiento,
+                onItemTap: (mov) async {
+                  final res = await Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => MovementDetailScreen(movement: mov),
+                    ),
+                  );
+                  if (res == true) {
+                    await _recargar();
+                  }
+                },
               ),
             ),
           ],

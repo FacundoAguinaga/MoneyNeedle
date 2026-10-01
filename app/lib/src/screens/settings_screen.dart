@@ -7,6 +7,7 @@ import 'package:share_plus/share_plus.dart';
 import '../auth/vault_service.dart';
 import '../rust/api.dart/api.dart';
 import '../services/notification_service.dart';
+import 'categories_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
   final VoidCallback? onDataRestored;
@@ -563,6 +564,31 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   onChanged: (val) async {
                     setState(() => _reminderEnabled = val);
                     await NotificationService.instance.setReminderEnabled(val);
+                  },
+                ),
+              ),
+
+              // Sección: Personalización y Categorías
+              _buildSectionHeader('Personalización'),
+              Card(
+                elevation: 0,
+                color: theme.colorScheme.surfaceContainerHighest,
+                margin: const EdgeInsets.only(bottom: 16),
+                child: ListTile(
+                  leading: const Icon(Icons.category_outlined, color: Colors.teal),
+                  title: const Text('Categorías y Rubros'),
+                  subtitle: const Text(
+                    'Personalizá nombres, íconos y colores de tus consumos',
+                    style: TextStyle(fontSize: 12),
+                  ),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const CategoriesScreen(),
+                      ),
+                    );
                   },
                 ),
               ),
