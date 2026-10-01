@@ -68,7 +68,7 @@ class RustLib extends BaseEntrypoint<RustLibApi, RustLibApiImpl, RustLibWire> {
   String get codegenVersion => '2.13.0';
 
   @override
-  int get rustContentHash => 1158393454;
+  int get rustContentHash => 1038825605;
 
   static const kDefaultExternalLibraryLoaderConfig =
       ExternalLibraryLoaderConfig(
@@ -90,6 +90,8 @@ abstract class RustLibApi extends BaseApi {
       required String fecha,
       required String frase});
 
+  Future<VaultInitDto> crateApiCreateVault({String? customPassphrase});
+
   Future<bool> crateApiInitDatabase(
       {required String dbPath, String? rawKeyHex});
 
@@ -103,6 +105,9 @@ abstract class RustLibApi extends BaseApi {
       {required String query,
       required String fechaHoy,
       required String cactPath});
+
+  Future<String> crateApiRecoverMasterKey(
+      {required String wrappedRecoveryPayload, required String recoveryPhrase});
 }
 
 class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
@@ -171,6 +176,30 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       );
 
   @override
+  Future<VaultInitDto> crateApiCreateVault({String? customPassphrase}) {
+    return handler.executeNormal(NormalTask(
+      callFfi: (port_) {
+        final serializer = SseSerializer(generalizedFrbRustBinding);
+        sse_encode_opt_String(customPassphrase, serializer);
+        pdeCallFfi(generalizedFrbRustBinding, serializer,
+            funcId: 2, port: port_);
+      },
+      codec: SseCodec(
+        decodeSuccessData: sse_decode_vault_init_dto,
+        decodeErrorData: sse_decode_AnyhowException,
+      ),
+      constMeta: kCrateApiCreateVaultConstMeta,
+      argValues: [customPassphrase],
+      apiImpl: this,
+    ));
+  }
+
+  TaskConstMeta get kCrateApiCreateVaultConstMeta => const TaskConstMeta(
+        debugName: "create_vault",
+        argNames: ["customPassphrase"],
+      );
+
+  @override
   Future<bool> crateApiInitDatabase(
       {required String dbPath, String? rawKeyHex}) {
     return handler.executeNormal(NormalTask(
@@ -179,7 +208,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         sse_encode_String(dbPath, serializer);
         sse_encode_opt_String(rawKeyHex, serializer);
         pdeCallFfi(generalizedFrbRustBinding, serializer,
-            funcId: 2, port: port_);
+            funcId: 3, port: port_);
       },
       codec: SseCodec(
         decodeSuccessData: sse_decode_bool,
@@ -205,7 +234,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         sse_encode_String(dbPath, serializer);
         sse_encode_i_64(limit, serializer);
         pdeCallFfi(generalizedFrbRustBinding, serializer,
-            funcId: 3, port: port_);
+            funcId: 4, port: port_);
       },
       codec: SseCodec(
         decodeSuccessData: sse_decode_list_movement_dto,
@@ -231,7 +260,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         sse_encode_String(query, serializer);
         sse_encode_String(fechaHoy, serializer);
         pdeCallFfi(generalizedFrbRustBinding, serializer,
-            funcId: 4, port: port_);
+            funcId: 5, port: port_);
       },
       codec: SseCodec(
         decodeSuccessData: sse_decode_proposal_dto,
@@ -260,7 +289,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         sse_encode_String(fechaHoy, serializer);
         sse_encode_String(cactPath, serializer);
         pdeCallFfi(generalizedFrbRustBinding, serializer,
-            funcId: 5, port: port_);
+            funcId: 6, port: port_);
       },
       codec: SseCodec(
         decodeSuccessData: sse_decode_proposal_dto,
@@ -275,6 +304,33 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   TaskConstMeta get kCrateApiProposeRealConstMeta => const TaskConstMeta(
         debugName: "propose_real",
         argNames: ["query", "fechaHoy", "cactPath"],
+      );
+
+  @override
+  Future<String> crateApiRecoverMasterKey(
+      {required String wrappedRecoveryPayload,
+      required String recoveryPhrase}) {
+    return handler.executeNormal(NormalTask(
+      callFfi: (port_) {
+        final serializer = SseSerializer(generalizedFrbRustBinding);
+        sse_encode_String(wrappedRecoveryPayload, serializer);
+        sse_encode_String(recoveryPhrase, serializer);
+        pdeCallFfi(generalizedFrbRustBinding, serializer,
+            funcId: 7, port: port_);
+      },
+      codec: SseCodec(
+        decodeSuccessData: sse_decode_String,
+        decodeErrorData: sse_decode_AnyhowException,
+      ),
+      constMeta: kCrateApiRecoverMasterKeyConstMeta,
+      argValues: [wrappedRecoveryPayload, recoveryPhrase],
+      apiImpl: this,
+    ));
+  }
+
+  TaskConstMeta get kCrateApiRecoverMasterKeyConstMeta => const TaskConstMeta(
+        debugName: "recover_master_key",
+        argNames: ["wrappedRecoveryPayload", "recoveryPhrase"],
       );
 
   @protected
@@ -368,6 +424,19 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   void dco_decode_unit(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return;
+  }
+
+  @protected
+  VaultInitDto dco_decode_vault_init_dto(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 3)
+      throw Exception('unexpected arr length: expect 3 but see ${arr.length}');
+    return VaultInitDto(
+      rawMasterKeyHex: dco_decode_String(arr[0]),
+      recoveryPhrase: dco_decode_String(arr[1]),
+      wrappedRecoveryPayload: dco_decode_String(arr[2]),
+    );
   }
 
   @protected
@@ -482,6 +551,18 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  VaultInitDto sse_decode_vault_init_dto(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_rawMasterKeyHex = sse_decode_String(deserializer);
+    var var_recoveryPhrase = sse_decode_String(deserializer);
+    var var_wrappedRecoveryPayload = sse_decode_String(deserializer);
+    return VaultInitDto(
+        rawMasterKeyHex: var_rawMasterKeyHex,
+        recoveryPhrase: var_recoveryPhrase,
+        wrappedRecoveryPayload: var_wrappedRecoveryPayload);
+  }
+
+  @protected
   int sse_decode_i_32(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     return deserializer.buffer.getInt32();
@@ -578,6 +659,14 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   @protected
   void sse_encode_unit(void self, SseSerializer serializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
+  }
+
+  @protected
+  void sse_encode_vault_init_dto(VaultInitDto self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.rawMasterKeyHex, serializer);
+    sse_encode_String(self.recoveryPhrase, serializer);
+    sse_encode_String(self.wrappedRecoveryPayload, serializer);
   }
 
   @protected

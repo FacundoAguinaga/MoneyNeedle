@@ -4,6 +4,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'src/auth/onboarding_vault_screen.dart';
+import 'src/auth/unlock_screen.dart';
+import 'src/auth/vault_service.dart';
 import 'src/rust/api.dart/api.dart';
 import 'src/rust/api.dart/frb_generated.dart';
 
@@ -21,8 +24,68 @@ class MoneyNeedleApp extends StatelessWidget {
     return MaterialApp(
       title: 'MoneyNeedle',
       theme: ThemeData(useMaterial3: true, colorSchemeSeed: Colors.green),
-      home: const HomePage(),
+      home: const RootGate(),
     );
+  }
+}
+
+class RootGate extends StatefulWidget {
+  const RootGate({super.key});
+
+  @override
+  State<RootGate> createState() => _RootGateState();
+}
+
+class _RootGateState extends State<RootGate> {
+  bool _loading = true;
+  bool _hasVault = false;
+  bool _unlocked = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkVault();
+  }
+
+  Future<void> _checkVault() async {
+    final has = await VaultService.hasVault();
+    if (!mounted) return;
+    setState(() {
+      _hasVault = has;
+      _loading = false;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_loading) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    if (!_hasVault) {
+      return OnboardingVaultScreen(
+        onVaultReady: () {
+          setState(() {
+            _hasVault = true;
+            _unlocked = true;
+          });
+        },
+      );
+    }
+
+    if (!_unlocked) {
+      return UnlockScreen(
+        onUnlocked: () {
+          setState(() {
+            _unlocked = true;
+          });
+        },
+      );
+    }
+
+    return const HomePage();
   }
 }
 
