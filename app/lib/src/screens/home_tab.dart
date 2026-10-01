@@ -1,20 +1,12 @@
-import 'dart:io';
-
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-import 'package:path_provider/path_provider.dart';
-import 'package:permission_handler/permission_handler.dart';
 import '../auth/vault_service.dart';
 import '../rust/api.dart/api.dart';
+import '../widgets/widgets.dart';
 
 class PendingProposal {
   final String texto;
   final ProposalDto propuesta;
   PendingProposal(this.texto, this.propuesta);
-
-  String get resumen =>
-      '${propuesta.tipo.toUpperCase()} \$${propuesta.monto.toStringAsFixed(0)} ${propuesta.moneda} '
-      '· Categ: ${propuesta.categoria} (grounded: ${propuesta.grounded ? "sí" : "no"})';
 }
 
 class HomeTab extends StatefulWidget {
@@ -25,14 +17,13 @@ class HomeTab extends StatefulWidget {
 }
 
 class _HomeTabState extends State<HomeTab> {
-  static const _stt = MethodChannel('moneyneedle/stt');
-  final _controller = TextEditingController();
-  PendingProposal? _pending;
+  HomeSummaryDto? _summary;
+  StreakDto? _streak;
   List<MovementDto> _movimientos = [];
   List<AccountDto> _accounts = [];
-  String? _selectedAccountId;
-  int _selectedCuotas = 1;
-  bool _escuchando = false;
+  List<CategoryDto> _categories = [];
+  PendingProposal? _pending;
+  bool _loading = true;
   bool _confirmando = false;
 
   @override
@@ -52,113 +43,63 @@ class _HomeTabState extends State<HomeTab> {
   Future<void> _recargar() async {
     try {
       final dbPath = await VaultService.getDbPath();
+      final summary = await getHomeSummary(dbPath: dbPath, currency: 'ARS');
+      final streak = await getUsageStreak(dbPath: dbPath);
       final movs = await listMovements(dbPath: dbPath, limit: 50);
       final accs = await listAccounts(dbPath: dbPath);
+      final cats = await listCategories(dbPath: dbPath);
+
       if (!mounted) return;
       setState(() {
+        _summary = summary;
+        _streak = streak;
         _movimientos = movs;
         _accounts = accs;
-        if (_selectedAccountId == null && accs.isNotEmpty) {
-          _selectedAccountId = accs.first.id;
-        }
+        _categories = cats;
+        _loading = false;
       });
-    } catch (_) {}
-  }
-
-  Future<void> _proponer() async {
-    final texto = _controller.text.trim();
-    if (texto.isEmpty) return;
-    final fecha = DateTime.now().toIso8601String().substring(0, 10);
-    try {
-      ProposalDto p;
-      try {
-        p = await proposeReal(
-          query: texto,
-          fechaHoy: fecha,
-          cactPath: await _cactPath(),
-        );
-      } catch (_) {
-        p = await proposeMocked(query: texto, fechaHoy: fecha);
-      }
-      setState(() {
-        _pending = PendingProposal(texto, p);
-        _selectedCuotas = 1;
-      });
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error del core: $e')),
-      );
+    } catch (_) {
+      if (mounted) setState(() => _loading = false);
     }
   }
 
-  Future<String> _cactPath() async {
-    final bytes = await rootBundle.load('assets/models/tuned2.cact');
-    final dir = await getApplicationDocumentsDirectory();
-    final f = File('${dir.path}/tuned2.cact');
-    if (!await f.exists()) {
-      await f.writeAsBytes(bytes.buffer.asUint8List());
-    }
-    return f.path;
+  void _abrirQuickAdd() {
+    QuickAddModal.show(
+      context: context,
+      onProposalGenerated: (query, proposal) {
+        setState(() {
+          _pending = PendingProposal(query, proposal);
+        });
+      },
+    );
   }
 
-  Future<void> _escuchar() async {
-    if (_escuchando) return;
-    var permiso = await Permission.microphone.status;
-    if (!permiso.isGranted) {
-      permiso = await Permission.microphone.request();
-    }
-    if (!permiso.isGranted) {
-      if (!mounted) return;
-      final bloqueado = permiso.isPermanentlyDenied;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(bloqueado
-              ? 'Mic bloqueado: activalo en Ajustes → Apps → MoneyNeedle'
-              : 'Sin micrófono no puedo escucharte'),
-          action: bloqueado
-              // ignore: prefer_const_constructors
-              ? SnackBarAction(label: 'Ajustes', onPressed: openAppSettings)
-              : null,
-        ),
-      );
-      return;
-    }
-    setState(() => _escuchando = true);
-    try {
-      final texto = await _stt.invokeMethod<String>('listen');
-      if (texto != null && texto.trim().isNotEmpty && mounted) {
-        _controller.text = texto.trim();
-        await _proponer();
-      }
-    } on PlatformException catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('No te entendí (${e.code}). Probá de nuevo.')),
-      );
-    } finally {
-      if (mounted) setState(() => _escuchando = false);
-    }
-  }
-
-  Future<void> _confirmar() async {
+  Future<void> _confirmarPropuesta({
+    required String tipo,
+    required double monto,
+    required String categoria,
+    required String fecha,
+    required String? accountId,
+    required int cuotas,
+  }) async {
     final pend = _pending;
     if (pend == null) return;
     setState(() => _confirmando = true);
 
     try {
       final dbPath = await VaultService.getDbPath();
-      final selectedAccount = _accounts.where((a) => a.id == _selectedAccountId).firstOrNull;
+      final selectedAccount =
+          _accounts.where((a) => a.id == accountId).firstOrNull;
       final isCard = selectedAccount?.accountType.toLowerCase() == 'credit_card';
 
-      if (isCard && _selectedCuotas > 1) {
+      if (isCard && cuotas > 1) {
         final now = DateTime.now();
         await confirmCreditPurchase(
           dbPath: dbPath,
           cardAccountId: selectedAccount!.id,
-          monto: pend.propuesta.monto,
-          cuotas: _selectedCuotas,
-          categoria: pend.propuesta.categoria,
+          monto: monto,
+          cuotas: cuotas,
+          categoria: categoria,
           descripcion: pend.texto,
           startCycleYear: now.year,
           startCycleMonth: now.month,
@@ -166,22 +107,25 @@ class _HomeTabState extends State<HomeTab> {
       } else {
         await confirmMovement(
           dbPath: dbPath,
-          tipo: pend.propuesta.tipo,
-          monto: pend.propuesta.monto,
-          moneda: pend.propuesta.moneda,
-          categoria: pend.propuesta.categoria,
+          tipo: tipo,
+          monto: monto,
+          moneda: selectedAccount?.currency ?? 'ARS',
+          categoria: categoria,
           descripcion: pend.texto,
-          fecha: pend.propuesta.fecha,
+          fecha: fecha,
           frase: pend.texto,
-          accountId: _selectedAccountId,
+          accountId: accountId,
         );
       }
 
-      _controller.clear();
+      if (!mounted) return;
       setState(() {
         _pending = null;
         _confirmando = false;
       });
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Movimiento registrado correctamente')),
+      );
       await _recargar();
     } catch (e) {
       if (mounted) {
@@ -193,184 +137,212 @@ class _HomeTabState extends State<HomeTab> {
     }
   }
 
-  @override
-  Widget build(BuildContext context) {
-    final selectedAccount = _accounts.where((a) => a.id == _selectedAccountId).firstOrNull;
-    final isCard = selectedAccount?.accountType.toLowerCase() == 'credit_card';
+  Widget _buildSummaryHeader() {
+    final theme = Theme.of(context);
+    final summary = _summary;
+    final streak = _streak;
+
+    if (summary == null) return const SizedBox.shrink();
+
+    final currency = summary.currency;
+    final totalBalance = summary.totalBalance;
+    final expense = summary.monthlyExpense;
+    final income = summary.monthlyIncome;
+    final delta = summary.deltaExpensePct;
 
     return Padding(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Row(
-            children: [
-              Expanded(
-                child: TextField(
-                  controller: _controller,
-                  decoration: const InputDecoration(
-                    hintText: 'gasté 5000 en súper...',
-                    border: OutlineInputBorder(),
-                  ),
-                  onSubmitted: (_) => _proponer(),
-                ),
-              ),
-              const SizedBox(width: 8),
-              IconButton(
-                icon: Icon(_escuchando ? Icons.graphic_eq : Icons.mic),
-                onPressed: _escuchar,
-              ),
-              const SizedBox(width: 4),
-              FilledButton(onPressed: _proponer, child: const Text('OK')),
-            ],
-          ),
-          if (_pending != null) ...[
-            const SizedBox(height: 12),
-            Card(
-              elevation: 2,
-              shape: RoundedRectangleBorder(
-                side: BorderSide(color: Theme.of(context).colorScheme.primary, width: 1.5),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Padding(
-                padding: const EdgeInsets.all(14),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+          // Card principal de Saldo Total Consolidado
+          MnCard(
+            padding: const EdgeInsets.all(18),
+            backgroundColor: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.35),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Expanded(
-                          child: Text(
-                            _pending!.resumen,
-                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
-                          ),
-                        ),
-                        IconButton(
-                          icon: const Icon(Icons.close, size: 20),
-                          onPressed: () => setState(() => _pending = null),
-                        ),
-                      ],
-                    ),
                     Text(
-                      '"${_pending!.texto}"',
-                      style: TextStyle(fontStyle: FontStyle.italic, color: Colors.grey.shade700),
+                      'Saldo consolidado',
+                      style: theme.textTheme.labelMedium?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
-                    const SizedBox(height: 12),
-                    Row(
-                      children: [
-                        Expanded(
-                          flex: 3,
-                          child: DropdownButtonFormField<String>(
-                            initialValue: _selectedAccountId,
-                            decoration: const InputDecoration(
-                              labelText: 'Cuenta destino/origen',
-                              isDense: true,
-                              border: OutlineInputBorder(),
-                            ),
-                            items: _accounts
-                                .map((a) => DropdownMenuItem(
-                                      value: a.id,
-                                      child: Text('${a.name} (${a.currency})'),
-                                    ))
-                                .toList(),
-                            onChanged: (val) => setState(() => _selectedAccountId = val),
+                    if (streak != null && streak.currentStreak > 0)
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: Colors.amber.withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: Colors.amber.withValues(alpha: 0.4),
                           ),
                         ),
-                        if (isCard) ...[
-                          const SizedBox(width: 8),
-                          Expanded(
-                            flex: 2,
-                            child: DropdownButtonFormField<int>(
-                              initialValue: _selectedCuotas,
-                              decoration: const InputDecoration(
-                                labelText: 'Cuotas',
-                                isDense: true,
-                                border: OutlineInputBorder(),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Text('🔥 ', style: TextStyle(fontSize: 12)),
+                            Text(
+                              '${streak.currentStreak} días',
+                              style: theme.textTheme.labelSmall?.copyWith(
+                                color: Colors.orange.shade900,
+                                fontWeight: FontWeight.bold,
                               ),
-                              items: const [
-                                DropdownMenuItem(value: 1, child: Text('1 cuota')),
-                                DropdownMenuItem(value: 3, child: Text('3 cuotas')),
-                                DropdownMenuItem(value: 6, child: Text('6 cuotas')),
-                                DropdownMenuItem(value: 12, child: Text('12 cuotas')),
-                                DropdownMenuItem(value: 18, child: Text('18 cuotas')),
-                                DropdownMenuItem(value: 24, child: Text('24 cuotas')),
-                              ],
-                              onChanged: (val) => setState(() => _selectedCuotas = val ?? 1),
+                            ),
+                          ],
+                        ),
+                      ),
+                  ],
+                ),
+                const SizedBox(height: 6),
+                MnAmountText(
+                  amount: totalBalance,
+                  currency: currency,
+                  colorize: false,
+                  style: theme.textTheme.headlineMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                const Divider(height: 1),
+                const SizedBox(height: 12),
+                // Fila de Ingresos y Gastos del mes
+                Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              const Icon(Icons.arrow_downward, size: 14, color: Colors.green),
+                              const SizedBox(width: 4),
+                              Text(
+                                'Ingresos mes',
+                                style: theme.textTheme.labelSmall?.copyWith(
+                                  color: theme.colorScheme.onSurfaceVariant,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 2),
+                          MnAmountText(
+                            amount: income,
+                            currency: currency,
+                            colorize: true,
+                            isIncome: true,
+                            style: theme.textTheme.titleSmall?.copyWith(
+                              fontWeight: FontWeight.bold,
                             ),
                           ),
                         ],
-                      ],
-                    ),
-                    if (isCard && _selectedCuotas > 1) ...[
-                      const SizedBox(height: 8),
-                      Text(
-                        'Total: \$${_pending!.propuesta.monto.toStringAsFixed(2)} en $_selectedCuotas cuotas de ~\$${(_pending!.propuesta.monto / _selectedCuotas).toStringAsFixed(2)} c/u',
-                        style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.primary),
                       ),
-                    ],
-                    const SizedBox(height: 12),
-                    SizedBox(
-                      width: double.infinity,
-                      child: FilledButton.icon(
-                        icon: _confirmando
-                            ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                            : const Icon(Icons.check),
-                        label: Text(_confirmando ? 'Guardando...' : 'Confirmar Movimiento'),
-                        onPressed: _confirmando ? null : _confirmar,
+                    ),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              const Icon(Icons.arrow_upward, size: 14, color: Colors.red),
+                              const SizedBox(width: 4),
+                              Text(
+                                'Gastos mes',
+                                style: theme.textTheme.labelSmall?.copyWith(
+                                  color: theme.colorScheme.onSurfaceVariant,
+                                ),
+                              ),
+                              if (delta != null) ...[
+                                const SizedBox(width: 4),
+                                Text(
+                                  '${delta >= 0 ? '+' : ''}${delta.toStringAsFixed(0)}%',
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.bold,
+                                    color: delta > 0 ? Colors.red : Colors.green,
+                                  ),
+                                ),
+                              ],
+                            ],
+                          ),
+                          const SizedBox(height: 2),
+                          MnAmountText(
+                            amount: expense,
+                            currency: currency,
+                            colorize: true,
+                            isExpense: true,
+                            style: theme.textTheme.titleSmall?.copyWith(
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ],
                 ),
-              ),
-            ),
-          ],
-          const SizedBox(height: 12),
-          Expanded(
-            child: RefreshIndicator(
-              onRefresh: _recargar,
-              child: _movimientos.isEmpty
-                  ? const Center(child: Text('No hay movimientos registrados todavía.'))
-                  : ListView.builder(
-                      itemCount: _movimientos.length,
-                      itemBuilder: (c, i) {
-                        final m = _movimientos[i];
-                        final isTransfer = m.tipo.toLowerCase() == 'transferencia' || m.tipo.toLowerCase() == 'transfer';
-                        final isGasto = m.tipo.toLowerCase() == 'gasto';
-
-                        Widget leadingIcon;
-                        if (isTransfer) {
-                          leadingIcon = CircleAvatar(
-                            backgroundColor: Colors.blue.shade50,
-                            child: Icon(Icons.swap_horiz, color: Colors.blue.shade700),
-                          );
-                        } else {
-                          leadingIcon = CircleAvatar(
-                            backgroundColor: isGasto ? Colors.red.shade50 : Colors.green.shade50,
-                            child: Icon(
-                              isGasto ? Icons.arrow_upward : Icons.arrow_downward,
-                              color: isGasto ? Colors.red : Colors.green,
-                            ),
-                          );
-                        }
-
-                        return ListTile(
-                          leading: leadingIcon,
-                          title: Text(
-                            '${m.tipo.toUpperCase()} \$${m.monto.toStringAsFixed(0)} ${m.moneda}',
-                            style: const TextStyle(fontWeight: FontWeight.bold),
-                          ),
-                          subtitle: Text(
-                            isTransfer
-                                ? '${m.fecha}\n${m.descripcion}'
-                                : '${m.categoria} · ${m.fecha}\n${m.descripcion}',
-                          ),
-                          isThreeLine: m.descripcion.isNotEmpty,
-                        );
-                      },
-                    ),
+              ],
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_loading && _movimientos.isEmpty && _summary == null) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    return Scaffold(
+      body: RefreshIndicator(
+        onRefresh: _recargar,
+        child: Column(
+          children: [
+            // Resumen Financiero Compacto
+            _buildSummaryHeader(),
+
+            // Tarjeta de Propuesta Interactiva NLP (si está pendiente)
+            if (_pending != null)
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                child: NlpProposalCard(
+                  rawPrompt: _pending!.texto,
+                  proposal: _pending!.propuesta,
+                  accounts: _accounts,
+                  categories: _categories,
+                  isConfirming: _confirmando,
+                  onConfirm: _confirmarPropuesta,
+                  onDiscard: () => setState(() => _pending = null),
+                ),
+              ),
+
+            // Encabezado de Movimientos Recientes
+            if (_movimientos.isNotEmpty)
+              const MnSectionHeader(
+                title: 'Movimientos recientes',
+                subtitle: 'Historial cronológico consolidado',
+              ),
+
+            // Lista agrupada por fecha
+            Expanded(
+              child: GroupedMovementList(
+                movements: _movimientos,
+                onEmptyAction: _abrirQuickAdd,
+              ),
+            ),
+          ],
+        ),
+      ),
+      // Opción A: FAB expandible para Command Palette
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: _abrirQuickAdd,
+        icon: const Icon(Icons.add),
+        label: const Text('Registrar'),
       ),
     );
   }
