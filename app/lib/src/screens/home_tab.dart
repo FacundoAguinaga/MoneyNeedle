@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import '../auth/vault_service.dart';
 import '../rust/api.dart/api.dart';
 import '../widgets/widgets.dart';
+import 'movement_detail_screen.dart';
 
 class PendingProposal {
   final String texto;
@@ -392,6 +393,17 @@ class HomeTabState extends State<HomeTab> {
                 movements: _movimientos,
                 onEmptyAction: _abrirQuickAdd,
                 onItemDismissed: _eliminarMovimiento,
+                onItemTap: (mov) async {
+                  final res = await Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => MovementDetailScreen(movement: mov),
+                    ),
+                  );
+                  if (res == true) {
+                    await _recargar();
+                  }
+                },
               ),
             ),
           ],

@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import '../auth/vault_service.dart';
 import '../rust/api.dart/api.dart';
 import '../widgets/widgets.dart';
+import 'movement_detail_screen.dart';
 
 /// Pantalla de búsqueda multicriterio en el historial de transacciones.
 class SearchScreen extends StatefulWidget {
@@ -366,7 +367,20 @@ class _SearchScreenState extends State<SearchScreen> {
                               HapticFeedback.heavyImpact();
                               _eliminarMovimiento(mov);
                             },
-                            child: MovementListItem(movement: mov),
+                            child: MovementListItem(
+                              movement: mov,
+                              onTap: () async {
+                                final res = await Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => MovementDetailScreen(movement: mov),
+                                  ),
+                                );
+                                if (res == true) {
+                                  await _ejecutarBusqueda();
+                                }
+                              },
+                            ),
                           );
                         },
                       ),
