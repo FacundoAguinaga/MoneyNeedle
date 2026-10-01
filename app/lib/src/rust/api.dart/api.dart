@@ -8,7 +8,7 @@ import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
 // These functions are ignored because they are not marked as `pub`: `engine`
 // These types are ignored because they are neither used by any `pub` functions nor (for structs and enums) marked `#[frb(unignore)]`: `Engine`
-// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `from`, `from`, `from`, `from`, `from`, `from`
+// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`
 
 /// Pipeline con inferencia mockeada: verifica el cableado sin modelo.
 Future<ProposalDto> proposeMocked(
@@ -139,6 +139,24 @@ Future<bool> deleteAccount(
     RustLib.instance.api
         .crateApiDeleteAccount(dbPath: dbPath, accountId: accountId);
 
+/// Actualiza una cuenta existente.
+Future<bool> updateAccount(
+        {required String dbPath,
+        required String accountId,
+        required String name,
+        required String color,
+        double? creditLimit,
+        int? closingDay,
+        int? dueDay}) =>
+    RustLib.instance.api.crateApiUpdateAccount(
+        dbPath: dbPath,
+        accountId: accountId,
+        name: name,
+        color: color,
+        creditLimit: creditLimit,
+        closingDay: closingDay,
+        dueDay: dueDay);
+
 /// Obtiene el resumen de tarjeta para un ciclo determinado.
 Future<CardStatementDto> getCardStatement(
         {required String dbPath,
@@ -179,6 +197,20 @@ Future<bool> deleteRecurringRule(
     RustLib.instance.api
         .crateApiDeleteRecurringRule(dbPath: dbPath, ruleId: ruleId);
 
+/// Actualiza una regla recurrente existente.
+Future<bool> updateRecurringRule(
+        {required String dbPath,
+        required String ruleId,
+        required double amount,
+        required String frequency,
+        required bool autoApply}) =>
+    RustLib.instance.api.crateApiUpdateRecurringRule(
+        dbPath: dbPath,
+        ruleId: ruleId,
+        amount: amount,
+        frequency: frequency,
+        autoApply: autoApply);
+
 /// Procesa las reglas recurrentes vencidas hasta hoy.
 Future<int> processRecurringRules({required String dbPath}) =>
     RustLib.instance.api.crateApiProcessRecurringRules(dbPath: dbPath);
@@ -200,6 +232,62 @@ Future<String> recoverMasterKey(
 Future<List<MovementDto>> listMovements(
         {required String dbPath, required PlatformInt64 limit}) =>
     RustLib.instance.api.crateApiListMovements(dbPath: dbPath, limit: limit);
+
+/// Elimina un movimiento de forma suave (soft-delete).
+Future<bool> deleteMovement(
+        {required String dbPath, required String movementId}) =>
+    RustLib.instance.api
+        .crateApiDeleteMovement(dbPath: dbPath, movementId: movementId);
+
+/// Restaura un movimiento eliminado previamente (Deshacer borrado).
+Future<bool> restoreMovement(
+        {required String dbPath, required String movementId}) =>
+    RustLib.instance.api
+        .crateApiRestoreMovement(dbPath: dbPath, movementId: movementId);
+
+/// Actualiza los datos de un movimiento confirmado.
+Future<bool> updateMovement(
+        {required String dbPath,
+        required String movementId,
+        required String tipo,
+        required double monto,
+        required String moneda,
+        required String categoria,
+        required String descripcion,
+        required String fecha,
+        String? accountId}) =>
+    RustLib.instance.api.crateApiUpdateMovement(
+        dbPath: dbPath,
+        movementId: movementId,
+        tipo: tipo,
+        monto: monto,
+        moneda: moneda,
+        categoria: categoria,
+        descripcion: descripcion,
+        fecha: fecha,
+        accountId: accountId);
+
+/// Busca y filtra movimientos de forma multicriterio con paginación.
+Future<List<MovementDto>> searchMovements(
+        {required String dbPath,
+        String? query,
+        PlatformInt64? startDateMs,
+        PlatformInt64? endDateMs,
+        String? categoryId,
+        String? accountId,
+        String? tipo,
+        required PlatformInt64 limit,
+        required PlatformInt64 offset}) =>
+    RustLib.instance.api.crateApiSearchMovements(
+        dbPath: dbPath,
+        query: query,
+        startDateMs: startDateMs,
+        endDateMs: endDateMs,
+        categoryId: categoryId,
+        accountId: accountId,
+        tipo: tipo,
+        limit: limit,
+        offset: offset);
 
 /// Reporte de gastos por categoría en un rango de fechas.
 Future<CategoryReportDto> getCategorySpendingReport(
@@ -309,6 +397,50 @@ Future<bool> deleteSavingGoal(
 /// Lista todas las categorías activas.
 Future<List<CategoryDto>> listCategories({required String dbPath}) =>
     RustLib.instance.api.crateApiListCategories(dbPath: dbPath);
+
+/// Crea una nueva categoría personalizada.
+Future<String> createCategory(
+        {required String dbPath,
+        required String name,
+        required String icon,
+        required String color,
+        String? parentId}) =>
+    RustLib.instance.api.crateApiCreateCategory(
+        dbPath: dbPath,
+        name: name,
+        icon: icon,
+        color: color,
+        parentId: parentId);
+
+/// Actualiza una categoría existente.
+Future<bool> updateCategory(
+        {required String dbPath,
+        required String categoryId,
+        required String name,
+        required String icon,
+        required String color}) =>
+    RustLib.instance.api.crateApiUpdateCategory(
+        dbPath: dbPath,
+        categoryId: categoryId,
+        name: name,
+        icon: icon,
+        color: color);
+
+/// Elimina una categoría custom (no del sistema).
+Future<bool> deleteCategory(
+        {required String dbPath, required String categoryId}) =>
+    RustLib.instance.api
+        .crateApiDeleteCategory(dbPath: dbPath, categoryId: categoryId);
+
+/// Devuelve el resumen financiero para el Home Tab.
+Future<HomeSummaryDto> getHomeSummary(
+        {required String dbPath, required String currency}) =>
+    RustLib.instance.api
+        .crateApiGetHomeSummary(dbPath: dbPath, currency: currency);
+
+/// Calcula la racha de días consecutivos de registro de gastos.
+Future<StreakDto> getUsageStreak({required String dbPath}) =>
+    RustLib.instance.api.crateApiGetUsageStreak(dbPath: dbPath);
 
 /// Exporta las transacciones a formato CSV estándar RFC 4180.
 Future<String> exportTransactionsCsv({required String dbPath}) =>
@@ -634,17 +766,23 @@ class CategoryDto {
   final String name;
   final String icon;
   final String color;
+  final bool isSystem;
 
   const CategoryDto({
     required this.id,
     required this.name,
     required this.icon,
     required this.color,
+    required this.isSystem,
   });
 
   @override
   int get hashCode =>
-      id.hashCode ^ name.hashCode ^ icon.hashCode ^ color.hashCode;
+      id.hashCode ^
+      name.hashCode ^
+      icon.hashCode ^
+      color.hashCode ^
+      isSystem.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -654,7 +792,8 @@ class CategoryDto {
           id == other.id &&
           name == other.name &&
           icon == other.icon &&
-          color == other.color;
+          color == other.color &&
+          isSystem == other.isSystem;
 }
 
 class CategoryReportDto {
@@ -795,6 +934,45 @@ class FinancialKpisDto {
           topCategoryAmount == other.topCategoryAmount;
 }
 
+class HomeSummaryDto {
+  final double totalBalance;
+  final double monthlyExpense;
+  final double monthlyIncome;
+  final double prevMonthExpense;
+  final double? deltaExpensePct;
+  final String currency;
+
+  const HomeSummaryDto({
+    required this.totalBalance,
+    required this.monthlyExpense,
+    required this.monthlyIncome,
+    required this.prevMonthExpense,
+    this.deltaExpensePct,
+    required this.currency,
+  });
+
+  @override
+  int get hashCode =>
+      totalBalance.hashCode ^
+      monthlyExpense.hashCode ^
+      monthlyIncome.hashCode ^
+      prevMonthExpense.hashCode ^
+      deltaExpensePct.hashCode ^
+      currency.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is HomeSummaryDto &&
+          runtimeType == other.runtimeType &&
+          totalBalance == other.totalBalance &&
+          monthlyExpense == other.monthlyExpense &&
+          monthlyIncome == other.monthlyIncome &&
+          prevMonthExpense == other.prevMonthExpense &&
+          deltaExpensePct == other.deltaExpensePct &&
+          currency == other.currency;
+}
+
 class InstallmentProjectionDto {
   final int cycleYear;
   final int cycleMonth;
@@ -839,6 +1017,8 @@ class MovementDto {
   final String categoria;
   final String descripcion;
   final String fecha;
+  final String? accountId;
+  final String? accountName;
 
   const MovementDto({
     required this.id,
@@ -848,6 +1028,8 @@ class MovementDto {
     required this.categoria,
     required this.descripcion,
     required this.fecha,
+    this.accountId,
+    this.accountName,
   });
 
   @override
@@ -858,7 +1040,9 @@ class MovementDto {
       moneda.hashCode ^
       categoria.hashCode ^
       descripcion.hashCode ^
-      fecha.hashCode;
+      fecha.hashCode ^
+      accountId.hashCode ^
+      accountName.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -871,7 +1055,9 @@ class MovementDto {
           moneda == other.moneda &&
           categoria == other.categoria &&
           descripcion == other.descripcion &&
-          fecha == other.fecha;
+          fecha == other.fecha &&
+          accountId == other.accountId &&
+          accountName == other.accountName;
 }
 
 /// Lo que Flutter muestra en la tarjeta de confirmación.
@@ -1019,6 +1205,31 @@ class SavingGoalDto {
           color == other.color &&
           icon == other.icon &&
           status == other.status;
+}
+
+class StreakDto {
+  final int currentStreak;
+  final int maxStreak;
+  final bool activeToday;
+
+  const StreakDto({
+    required this.currentStreak,
+    required this.maxStreak,
+    required this.activeToday,
+  });
+
+  @override
+  int get hashCode =>
+      currentStreak.hashCode ^ maxStreak.hashCode ^ activeToday.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is StreakDto &&
+          runtimeType == other.runtimeType &&
+          currentStreak == other.currentStreak &&
+          maxStreak == other.maxStreak &&
+          activeToday == other.activeToday;
 }
 
 /// DTO con los datos de creación inicial del vault.

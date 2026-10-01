@@ -68,7 +68,7 @@ class RustLib extends BaseEntrypoint<RustLibApi, RustLibApiImpl, RustLibWire> {
   String get codegenVersion => '2.13.0';
 
   @override
-  int get rustContentHash => 2062269863;
+  int get rustContentHash => -1910779077;
 
   static const kDefaultExternalLibraryLoaderConfig =
       ExternalLibraryLoaderConfig(
@@ -118,6 +118,13 @@ abstract class RustLibApi extends BaseApi {
       required String color,
       required String icon});
 
+  Future<String> crateApiCreateCategory(
+      {required String dbPath,
+      required String name,
+      required String icon,
+      required String color,
+      String? parentId});
+
   Future<Uint8List> crateApiCreateEncryptedBackup(
       {required String dbPath, required String passphrase});
 
@@ -155,6 +162,12 @@ abstract class RustLibApi extends BaseApi {
   Future<bool> crateApiDeleteBudget(
       {required String dbPath, required String budgetId});
 
+  Future<bool> crateApiDeleteCategory(
+      {required String dbPath, required String categoryId});
+
+  Future<bool> crateApiDeleteMovement(
+      {required String dbPath, required String movementId});
+
   Future<bool> crateApiDeleteRecurringRule(
       {required String dbPath, required String ruleId});
 
@@ -185,6 +198,9 @@ abstract class RustLibApi extends BaseApi {
       required PlatformInt64 endDateMs,
       required String currency});
 
+  Future<HomeSummaryDto> crateApiGetHomeSummary(
+      {required String dbPath, required String currency});
+
   Future<List<InstallmentProjectionDto>> crateApiGetInstallmentCommitments(
       {required String dbPath, required String currency});
 
@@ -197,6 +213,8 @@ abstract class RustLibApi extends BaseApi {
       {required String dbPath,
       required String currency,
       required int monthsLimit});
+
+  Future<StreakDto> crateApiGetUsageStreak({required String dbPath});
 
   Future<bool> crateApiInitDatabase(
       {required String dbPath, String? rawKeyHex});
@@ -242,12 +260,60 @@ abstract class RustLibApi extends BaseApi {
       required List<int> backupBytes,
       required String passphrase});
 
+  Future<bool> crateApiRestoreMovement(
+      {required String dbPath, required String movementId});
+
+  Future<List<MovementDto>> crateApiSearchMovements(
+      {required String dbPath,
+      String? query,
+      PlatformInt64? startDateMs,
+      PlatformInt64? endDateMs,
+      String? categoryId,
+      String? accountId,
+      String? tipo,
+      required PlatformInt64 limit,
+      required PlatformInt64 offset});
+
   Future<String> crateApiSetCategoryBudget(
       {required String dbPath,
       required String categoryId,
       required String currency,
       required double amount,
       required int alertPercentage});
+
+  Future<bool> crateApiUpdateAccount(
+      {required String dbPath,
+      required String accountId,
+      required String name,
+      required String color,
+      double? creditLimit,
+      int? closingDay,
+      int? dueDay});
+
+  Future<bool> crateApiUpdateCategory(
+      {required String dbPath,
+      required String categoryId,
+      required String name,
+      required String icon,
+      required String color});
+
+  Future<bool> crateApiUpdateMovement(
+      {required String dbPath,
+      required String movementId,
+      required String tipo,
+      required double monto,
+      required String moneda,
+      required String categoria,
+      required String descripcion,
+      required String fecha,
+      String? accountId});
+
+  Future<bool> crateApiUpdateRecurringRule(
+      {required String dbPath,
+      required String ruleId,
+      required double amount,
+      required String frequency,
+      required bool autoApply});
 }
 
 class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
@@ -497,6 +563,39 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       );
 
   @override
+  Future<String> crateApiCreateCategory(
+      {required String dbPath,
+      required String name,
+      required String icon,
+      required String color,
+      String? parentId}) {
+    return handler.executeNormal(NormalTask(
+      callFfi: (port_) {
+        final serializer = SseSerializer(generalizedFrbRustBinding);
+        sse_encode_String(dbPath, serializer);
+        sse_encode_String(name, serializer);
+        sse_encode_String(icon, serializer);
+        sse_encode_String(color, serializer);
+        sse_encode_opt_String(parentId, serializer);
+        pdeCallFfi(generalizedFrbRustBinding, serializer,
+            funcId: 6, port: port_);
+      },
+      codec: SseCodec(
+        decodeSuccessData: sse_decode_String,
+        decodeErrorData: sse_decode_AnyhowException,
+      ),
+      constMeta: kCrateApiCreateCategoryConstMeta,
+      argValues: [dbPath, name, icon, color, parentId],
+      apiImpl: this,
+    ));
+  }
+
+  TaskConstMeta get kCrateApiCreateCategoryConstMeta => const TaskConstMeta(
+        debugName: "create_category",
+        argNames: ["dbPath", "name", "icon", "color", "parentId"],
+      );
+
+  @override
   Future<Uint8List> crateApiCreateEncryptedBackup(
       {required String dbPath, required String passphrase}) {
     return handler.executeNormal(NormalTask(
@@ -505,7 +604,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         sse_encode_String(dbPath, serializer);
         sse_encode_String(passphrase, serializer);
         pdeCallFfi(generalizedFrbRustBinding, serializer,
-            funcId: 6, port: port_);
+            funcId: 7, port: port_);
       },
       codec: SseCodec(
         decodeSuccessData: sse_decode_list_prim_u_8_strict,
@@ -543,7 +642,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         sse_encode_String(frequency, serializer);
         sse_encode_bool(autoApply, serializer);
         pdeCallFfi(generalizedFrbRustBinding, serializer,
-            funcId: 7, port: port_);
+            funcId: 8, port: port_);
       },
       codec: SseCodec(
         decodeSuccessData: sse_decode_String,
@@ -597,7 +696,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         sse_encode_String(color, serializer);
         sse_encode_String(icon, serializer);
         pdeCallFfi(generalizedFrbRustBinding, serializer,
-            funcId: 8, port: port_);
+            funcId: 9, port: port_);
       },
       codec: SseCodec(
         decodeSuccessData: sse_decode_String,
@@ -648,7 +747,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         sse_encode_f_64(toAmount, serializer);
         sse_encode_String(notes, serializer);
         pdeCallFfi(generalizedFrbRustBinding, serializer,
-            funcId: 9, port: port_);
+            funcId: 10, port: port_);
       },
       codec: SseCodec(
         decodeSuccessData: sse_decode_String,
@@ -686,7 +785,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         final serializer = SseSerializer(generalizedFrbRustBinding);
         sse_encode_opt_String(customPassphrase, serializer);
         pdeCallFfi(generalizedFrbRustBinding, serializer,
-            funcId: 10, port: port_);
+            funcId: 11, port: port_);
       },
       codec: SseCodec(
         decodeSuccessData: sse_decode_vault_init_dto,
@@ -712,7 +811,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         sse_encode_String(dbPath, serializer);
         sse_encode_String(accountId, serializer);
         pdeCallFfi(generalizedFrbRustBinding, serializer,
-            funcId: 11, port: port_);
+            funcId: 12, port: port_);
       },
       codec: SseCodec(
         decodeSuccessData: sse_decode_bool,
@@ -738,7 +837,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         sse_encode_String(dbPath, serializer);
         sse_encode_String(budgetId, serializer);
         pdeCallFfi(generalizedFrbRustBinding, serializer,
-            funcId: 12, port: port_);
+            funcId: 13, port: port_);
       },
       codec: SseCodec(
         decodeSuccessData: sse_decode_bool,
@@ -756,6 +855,58 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       );
 
   @override
+  Future<bool> crateApiDeleteCategory(
+      {required String dbPath, required String categoryId}) {
+    return handler.executeNormal(NormalTask(
+      callFfi: (port_) {
+        final serializer = SseSerializer(generalizedFrbRustBinding);
+        sse_encode_String(dbPath, serializer);
+        sse_encode_String(categoryId, serializer);
+        pdeCallFfi(generalizedFrbRustBinding, serializer,
+            funcId: 14, port: port_);
+      },
+      codec: SseCodec(
+        decodeSuccessData: sse_decode_bool,
+        decodeErrorData: sse_decode_AnyhowException,
+      ),
+      constMeta: kCrateApiDeleteCategoryConstMeta,
+      argValues: [dbPath, categoryId],
+      apiImpl: this,
+    ));
+  }
+
+  TaskConstMeta get kCrateApiDeleteCategoryConstMeta => const TaskConstMeta(
+        debugName: "delete_category",
+        argNames: ["dbPath", "categoryId"],
+      );
+
+  @override
+  Future<bool> crateApiDeleteMovement(
+      {required String dbPath, required String movementId}) {
+    return handler.executeNormal(NormalTask(
+      callFfi: (port_) {
+        final serializer = SseSerializer(generalizedFrbRustBinding);
+        sse_encode_String(dbPath, serializer);
+        sse_encode_String(movementId, serializer);
+        pdeCallFfi(generalizedFrbRustBinding, serializer,
+            funcId: 15, port: port_);
+      },
+      codec: SseCodec(
+        decodeSuccessData: sse_decode_bool,
+        decodeErrorData: sse_decode_AnyhowException,
+      ),
+      constMeta: kCrateApiDeleteMovementConstMeta,
+      argValues: [dbPath, movementId],
+      apiImpl: this,
+    ));
+  }
+
+  TaskConstMeta get kCrateApiDeleteMovementConstMeta => const TaskConstMeta(
+        debugName: "delete_movement",
+        argNames: ["dbPath", "movementId"],
+      );
+
+  @override
   Future<bool> crateApiDeleteRecurringRule(
       {required String dbPath, required String ruleId}) {
     return handler.executeNormal(NormalTask(
@@ -764,7 +915,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         sse_encode_String(dbPath, serializer);
         sse_encode_String(ruleId, serializer);
         pdeCallFfi(generalizedFrbRustBinding, serializer,
-            funcId: 13, port: port_);
+            funcId: 16, port: port_);
       },
       codec: SseCodec(
         decodeSuccessData: sse_decode_bool,
@@ -791,7 +942,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         sse_encode_String(dbPath, serializer);
         sse_encode_String(goalId, serializer);
         pdeCallFfi(generalizedFrbRustBinding, serializer,
-            funcId: 14, port: port_);
+            funcId: 17, port: port_);
       },
       codec: SseCodec(
         decodeSuccessData: sse_decode_bool,
@@ -815,7 +966,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         final serializer = SseSerializer(generalizedFrbRustBinding);
         sse_encode_String(dbPath, serializer);
         pdeCallFfi(generalizedFrbRustBinding, serializer,
-            funcId: 15, port: port_);
+            funcId: 18, port: port_);
       },
       codec: SseCodec(
         decodeSuccessData: sse_decode_String,
@@ -840,7 +991,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         final serializer = SseSerializer(generalizedFrbRustBinding);
         sse_encode_String(dbPath, serializer);
         pdeCallFfi(generalizedFrbRustBinding, serializer,
-            funcId: 16, port: port_);
+            funcId: 19, port: port_);
       },
       codec: SseCodec(
         decodeSuccessData: sse_decode_String,
@@ -865,7 +1016,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         final serializer = SseSerializer(generalizedFrbRustBinding);
         sse_encode_String(dbPath, serializer);
         pdeCallFfi(generalizedFrbRustBinding, serializer,
-            funcId: 17, port: port_);
+            funcId: 20, port: port_);
       },
       codec: SseCodec(
         decodeSuccessData: sse_decode_String,
@@ -897,7 +1048,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         sse_encode_i_32(cycleYear, serializer);
         sse_encode_i_32(cycleMonth, serializer);
         pdeCallFfi(generalizedFrbRustBinding, serializer,
-            funcId: 18, port: port_);
+            funcId: 21, port: port_);
       },
       codec: SseCodec(
         decodeSuccessData: sse_decode_card_statement_dto,
@@ -928,7 +1079,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         sse_encode_i_64(endDateMs, serializer);
         sse_encode_String(currency, serializer);
         pdeCallFfi(generalizedFrbRustBinding, serializer,
-            funcId: 19, port: port_);
+            funcId: 22, port: port_);
       },
       codec: SseCodec(
         decodeSuccessData: sse_decode_category_report_dto,
@@ -960,7 +1111,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         sse_encode_i_64(endDateMs, serializer);
         sse_encode_String(currency, serializer);
         pdeCallFfi(generalizedFrbRustBinding, serializer,
-            funcId: 20, port: port_);
+            funcId: 23, port: port_);
       },
       codec: SseCodec(
         decodeSuccessData: sse_decode_financial_kpis_dto,
@@ -978,6 +1129,32 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       );
 
   @override
+  Future<HomeSummaryDto> crateApiGetHomeSummary(
+      {required String dbPath, required String currency}) {
+    return handler.executeNormal(NormalTask(
+      callFfi: (port_) {
+        final serializer = SseSerializer(generalizedFrbRustBinding);
+        sse_encode_String(dbPath, serializer);
+        sse_encode_String(currency, serializer);
+        pdeCallFfi(generalizedFrbRustBinding, serializer,
+            funcId: 24, port: port_);
+      },
+      codec: SseCodec(
+        decodeSuccessData: sse_decode_home_summary_dto,
+        decodeErrorData: sse_decode_AnyhowException,
+      ),
+      constMeta: kCrateApiGetHomeSummaryConstMeta,
+      argValues: [dbPath, currency],
+      apiImpl: this,
+    ));
+  }
+
+  TaskConstMeta get kCrateApiGetHomeSummaryConstMeta => const TaskConstMeta(
+        debugName: "get_home_summary",
+        argNames: ["dbPath", "currency"],
+      );
+
+  @override
   Future<List<InstallmentProjectionDto>> crateApiGetInstallmentCommitments(
       {required String dbPath, required String currency}) {
     return handler.executeNormal(NormalTask(
@@ -986,7 +1163,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         sse_encode_String(dbPath, serializer);
         sse_encode_String(currency, serializer);
         pdeCallFfi(generalizedFrbRustBinding, serializer,
-            funcId: 21, port: port_);
+            funcId: 25, port: port_);
       },
       codec: SseCodec(
         decodeSuccessData: sse_decode_list_installment_projection_dto,
@@ -1016,7 +1193,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         sse_encode_String(baseCurrency, serializer);
         sse_encode_String(quoteCurrency, serializer);
         pdeCallFfi(generalizedFrbRustBinding, serializer,
-            funcId: 22, port: port_);
+            funcId: 26, port: port_);
       },
       codec: SseCodec(
         decodeSuccessData: sse_decode_opt_box_autoadd_exchange_rate_dto,
@@ -1046,7 +1223,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         sse_encode_String(currency, serializer);
         sse_encode_i_32(monthsLimit, serializer);
         pdeCallFfi(generalizedFrbRustBinding, serializer,
-            funcId: 23, port: port_);
+            funcId: 27, port: port_);
       },
       codec: SseCodec(
         decodeSuccessData: sse_decode_list_cashflow_item_dto,
@@ -1065,6 +1242,30 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       );
 
   @override
+  Future<StreakDto> crateApiGetUsageStreak({required String dbPath}) {
+    return handler.executeNormal(NormalTask(
+      callFfi: (port_) {
+        final serializer = SseSerializer(generalizedFrbRustBinding);
+        sse_encode_String(dbPath, serializer);
+        pdeCallFfi(generalizedFrbRustBinding, serializer,
+            funcId: 28, port: port_);
+      },
+      codec: SseCodec(
+        decodeSuccessData: sse_decode_streak_dto,
+        decodeErrorData: sse_decode_AnyhowException,
+      ),
+      constMeta: kCrateApiGetUsageStreakConstMeta,
+      argValues: [dbPath],
+      apiImpl: this,
+    ));
+  }
+
+  TaskConstMeta get kCrateApiGetUsageStreakConstMeta => const TaskConstMeta(
+        debugName: "get_usage_streak",
+        argNames: ["dbPath"],
+      );
+
+  @override
   Future<bool> crateApiInitDatabase(
       {required String dbPath, String? rawKeyHex}) {
     return handler.executeNormal(NormalTask(
@@ -1073,7 +1274,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         sse_encode_String(dbPath, serializer);
         sse_encode_opt_String(rawKeyHex, serializer);
         pdeCallFfi(generalizedFrbRustBinding, serializer,
-            funcId: 24, port: port_);
+            funcId: 29, port: port_);
       },
       codec: SseCodec(
         decodeSuccessData: sse_decode_bool,
@@ -1097,7 +1298,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         final serializer = SseSerializer(generalizedFrbRustBinding);
         sse_encode_String(dbPath, serializer);
         pdeCallFfi(generalizedFrbRustBinding, serializer,
-            funcId: 25, port: port_);
+            funcId: 30, port: port_);
       },
       codec: SseCodec(
         decodeSuccessData: sse_decode_list_account_dto,
@@ -1128,7 +1329,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         sse_encode_i_64(endDateMs, serializer);
         sse_encode_String(currency, serializer);
         pdeCallFfi(generalizedFrbRustBinding, serializer,
-            funcId: 26, port: port_);
+            funcId: 31, port: port_);
       },
       codec: SseCodec(
         decodeSuccessData: sse_decode_list_budget_status_dto,
@@ -1152,7 +1353,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         final serializer = SseSerializer(generalizedFrbRustBinding);
         sse_encode_String(dbPath, serializer);
         pdeCallFfi(generalizedFrbRustBinding, serializer,
-            funcId: 27, port: port_);
+            funcId: 32, port: port_);
       },
       codec: SseCodec(
         decodeSuccessData: sse_decode_list_category_dto,
@@ -1177,7 +1378,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         final serializer = SseSerializer(generalizedFrbRustBinding);
         sse_encode_String(dbPath, serializer);
         pdeCallFfi(generalizedFrbRustBinding, serializer,
-            funcId: 28, port: port_);
+            funcId: 33, port: port_);
       },
       codec: SseCodec(
         decodeSuccessData: sse_decode_list_exchange_rate_dto,
@@ -1203,7 +1404,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         sse_encode_String(dbPath, serializer);
         sse_encode_i_64(limit, serializer);
         pdeCallFfi(generalizedFrbRustBinding, serializer,
-            funcId: 29, port: port_);
+            funcId: 34, port: port_);
       },
       codec: SseCodec(
         decodeSuccessData: sse_decode_list_movement_dto,
@@ -1228,7 +1429,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         final serializer = SseSerializer(generalizedFrbRustBinding);
         sse_encode_String(dbPath, serializer);
         pdeCallFfi(generalizedFrbRustBinding, serializer,
-            funcId: 30, port: port_);
+            funcId: 35, port: port_);
       },
       codec: SseCodec(
         decodeSuccessData: sse_decode_list_recurring_rule_dto,
@@ -1253,7 +1454,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         final serializer = SseSerializer(generalizedFrbRustBinding);
         sse_encode_String(dbPath, serializer);
         pdeCallFfi(generalizedFrbRustBinding, serializer,
-            funcId: 31, port: port_);
+            funcId: 36, port: port_);
       },
       codec: SseCodec(
         decodeSuccessData: sse_decode_list_saving_goal_dto,
@@ -1277,7 +1478,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         final serializer = SseSerializer(generalizedFrbRustBinding);
         sse_encode_String(dbPath, serializer);
         pdeCallFfi(generalizedFrbRustBinding, serializer,
-            funcId: 32, port: port_);
+            funcId: 37, port: port_);
       },
       codec: SseCodec(
         decodeSuccessData: sse_decode_bool,
@@ -1301,7 +1502,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         final serializer = SseSerializer(generalizedFrbRustBinding);
         sse_encode_String(dbPath, serializer);
         pdeCallFfi(generalizedFrbRustBinding, serializer,
-            funcId: 33, port: port_);
+            funcId: 38, port: port_);
       },
       codec: SseCodec(
         decodeSuccessData: sse_decode_i_32,
@@ -1328,7 +1529,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         sse_encode_String(query, serializer);
         sse_encode_String(fechaHoy, serializer);
         pdeCallFfi(generalizedFrbRustBinding, serializer,
-            funcId: 34, port: port_);
+            funcId: 39, port: port_);
       },
       codec: SseCodec(
         decodeSuccessData: sse_decode_proposal_dto,
@@ -1357,7 +1558,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         sse_encode_String(fechaHoy, serializer);
         sse_encode_String(cactPath, serializer);
         pdeCallFfi(generalizedFrbRustBinding, serializer,
-            funcId: 35, port: port_);
+            funcId: 40, port: port_);
       },
       codec: SseCodec(
         decodeSuccessData: sse_decode_proposal_dto,
@@ -1384,7 +1585,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         sse_encode_String(wrappedRecoveryPayload, serializer);
         sse_encode_String(recoveryPhrase, serializer);
         pdeCallFfi(generalizedFrbRustBinding, serializer,
-            funcId: 36, port: port_);
+            funcId: 41, port: port_);
       },
       codec: SseCodec(
         decodeSuccessData: sse_decode_String,
@@ -1413,7 +1614,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         sse_encode_list_prim_u_8_loose(backupBytes, serializer);
         sse_encode_String(passphrase, serializer);
         pdeCallFfi(generalizedFrbRustBinding, serializer,
-            funcId: 37, port: port_);
+            funcId: 42, port: port_);
       },
       codec: SseCodec(
         decodeSuccessData: sse_decode_backup_restore_summary_dto,
@@ -1432,6 +1633,93 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       );
 
   @override
+  Future<bool> crateApiRestoreMovement(
+      {required String dbPath, required String movementId}) {
+    return handler.executeNormal(NormalTask(
+      callFfi: (port_) {
+        final serializer = SseSerializer(generalizedFrbRustBinding);
+        sse_encode_String(dbPath, serializer);
+        sse_encode_String(movementId, serializer);
+        pdeCallFfi(generalizedFrbRustBinding, serializer,
+            funcId: 43, port: port_);
+      },
+      codec: SseCodec(
+        decodeSuccessData: sse_decode_bool,
+        decodeErrorData: sse_decode_AnyhowException,
+      ),
+      constMeta: kCrateApiRestoreMovementConstMeta,
+      argValues: [dbPath, movementId],
+      apiImpl: this,
+    ));
+  }
+
+  TaskConstMeta get kCrateApiRestoreMovementConstMeta => const TaskConstMeta(
+        debugName: "restore_movement",
+        argNames: ["dbPath", "movementId"],
+      );
+
+  @override
+  Future<List<MovementDto>> crateApiSearchMovements(
+      {required String dbPath,
+      String? query,
+      PlatformInt64? startDateMs,
+      PlatformInt64? endDateMs,
+      String? categoryId,
+      String? accountId,
+      String? tipo,
+      required PlatformInt64 limit,
+      required PlatformInt64 offset}) {
+    return handler.executeNormal(NormalTask(
+      callFfi: (port_) {
+        final serializer = SseSerializer(generalizedFrbRustBinding);
+        sse_encode_String(dbPath, serializer);
+        sse_encode_opt_String(query, serializer);
+        sse_encode_opt_box_autoadd_i_64(startDateMs, serializer);
+        sse_encode_opt_box_autoadd_i_64(endDateMs, serializer);
+        sse_encode_opt_String(categoryId, serializer);
+        sse_encode_opt_String(accountId, serializer);
+        sse_encode_opt_String(tipo, serializer);
+        sse_encode_i_64(limit, serializer);
+        sse_encode_i_64(offset, serializer);
+        pdeCallFfi(generalizedFrbRustBinding, serializer,
+            funcId: 44, port: port_);
+      },
+      codec: SseCodec(
+        decodeSuccessData: sse_decode_list_movement_dto,
+        decodeErrorData: sse_decode_AnyhowException,
+      ),
+      constMeta: kCrateApiSearchMovementsConstMeta,
+      argValues: [
+        dbPath,
+        query,
+        startDateMs,
+        endDateMs,
+        categoryId,
+        accountId,
+        tipo,
+        limit,
+        offset
+      ],
+      apiImpl: this,
+    ));
+  }
+
+  TaskConstMeta get kCrateApiSearchMovementsConstMeta => const TaskConstMeta(
+        debugName: "search_movements",
+        argNames: [
+          "dbPath",
+          "query",
+          "startDateMs",
+          "endDateMs",
+          "categoryId",
+          "accountId",
+          "tipo",
+          "limit",
+          "offset"
+        ],
+      );
+
+  @override
   Future<String> crateApiSetCategoryBudget(
       {required String dbPath,
       required String categoryId,
@@ -1447,7 +1735,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         sse_encode_f_64(amount, serializer);
         sse_encode_i_32(alertPercentage, serializer);
         pdeCallFfi(generalizedFrbRustBinding, serializer,
-            funcId: 38, port: port_);
+            funcId: 45, port: port_);
       },
       codec: SseCodec(
         decodeSuccessData: sse_decode_String,
@@ -1468,6 +1756,187 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           "amount",
           "alertPercentage"
         ],
+      );
+
+  @override
+  Future<bool> crateApiUpdateAccount(
+      {required String dbPath,
+      required String accountId,
+      required String name,
+      required String color,
+      double? creditLimit,
+      int? closingDay,
+      int? dueDay}) {
+    return handler.executeNormal(NormalTask(
+      callFfi: (port_) {
+        final serializer = SseSerializer(generalizedFrbRustBinding);
+        sse_encode_String(dbPath, serializer);
+        sse_encode_String(accountId, serializer);
+        sse_encode_String(name, serializer);
+        sse_encode_String(color, serializer);
+        sse_encode_opt_box_autoadd_f_64(creditLimit, serializer);
+        sse_encode_opt_box_autoadd_i_32(closingDay, serializer);
+        sse_encode_opt_box_autoadd_i_32(dueDay, serializer);
+        pdeCallFfi(generalizedFrbRustBinding, serializer,
+            funcId: 46, port: port_);
+      },
+      codec: SseCodec(
+        decodeSuccessData: sse_decode_bool,
+        decodeErrorData: sse_decode_AnyhowException,
+      ),
+      constMeta: kCrateApiUpdateAccountConstMeta,
+      argValues: [
+        dbPath,
+        accountId,
+        name,
+        color,
+        creditLimit,
+        closingDay,
+        dueDay
+      ],
+      apiImpl: this,
+    ));
+  }
+
+  TaskConstMeta get kCrateApiUpdateAccountConstMeta => const TaskConstMeta(
+        debugName: "update_account",
+        argNames: [
+          "dbPath",
+          "accountId",
+          "name",
+          "color",
+          "creditLimit",
+          "closingDay",
+          "dueDay"
+        ],
+      );
+
+  @override
+  Future<bool> crateApiUpdateCategory(
+      {required String dbPath,
+      required String categoryId,
+      required String name,
+      required String icon,
+      required String color}) {
+    return handler.executeNormal(NormalTask(
+      callFfi: (port_) {
+        final serializer = SseSerializer(generalizedFrbRustBinding);
+        sse_encode_String(dbPath, serializer);
+        sse_encode_String(categoryId, serializer);
+        sse_encode_String(name, serializer);
+        sse_encode_String(icon, serializer);
+        sse_encode_String(color, serializer);
+        pdeCallFfi(generalizedFrbRustBinding, serializer,
+            funcId: 47, port: port_);
+      },
+      codec: SseCodec(
+        decodeSuccessData: sse_decode_bool,
+        decodeErrorData: sse_decode_AnyhowException,
+      ),
+      constMeta: kCrateApiUpdateCategoryConstMeta,
+      argValues: [dbPath, categoryId, name, icon, color],
+      apiImpl: this,
+    ));
+  }
+
+  TaskConstMeta get kCrateApiUpdateCategoryConstMeta => const TaskConstMeta(
+        debugName: "update_category",
+        argNames: ["dbPath", "categoryId", "name", "icon", "color"],
+      );
+
+  @override
+  Future<bool> crateApiUpdateMovement(
+      {required String dbPath,
+      required String movementId,
+      required String tipo,
+      required double monto,
+      required String moneda,
+      required String categoria,
+      required String descripcion,
+      required String fecha,
+      String? accountId}) {
+    return handler.executeNormal(NormalTask(
+      callFfi: (port_) {
+        final serializer = SseSerializer(generalizedFrbRustBinding);
+        sse_encode_String(dbPath, serializer);
+        sse_encode_String(movementId, serializer);
+        sse_encode_String(tipo, serializer);
+        sse_encode_f_64(monto, serializer);
+        sse_encode_String(moneda, serializer);
+        sse_encode_String(categoria, serializer);
+        sse_encode_String(descripcion, serializer);
+        sse_encode_String(fecha, serializer);
+        sse_encode_opt_String(accountId, serializer);
+        pdeCallFfi(generalizedFrbRustBinding, serializer,
+            funcId: 48, port: port_);
+      },
+      codec: SseCodec(
+        decodeSuccessData: sse_decode_bool,
+        decodeErrorData: sse_decode_AnyhowException,
+      ),
+      constMeta: kCrateApiUpdateMovementConstMeta,
+      argValues: [
+        dbPath,
+        movementId,
+        tipo,
+        monto,
+        moneda,
+        categoria,
+        descripcion,
+        fecha,
+        accountId
+      ],
+      apiImpl: this,
+    ));
+  }
+
+  TaskConstMeta get kCrateApiUpdateMovementConstMeta => const TaskConstMeta(
+        debugName: "update_movement",
+        argNames: [
+          "dbPath",
+          "movementId",
+          "tipo",
+          "monto",
+          "moneda",
+          "categoria",
+          "descripcion",
+          "fecha",
+          "accountId"
+        ],
+      );
+
+  @override
+  Future<bool> crateApiUpdateRecurringRule(
+      {required String dbPath,
+      required String ruleId,
+      required double amount,
+      required String frequency,
+      required bool autoApply}) {
+    return handler.executeNormal(NormalTask(
+      callFfi: (port_) {
+        final serializer = SseSerializer(generalizedFrbRustBinding);
+        sse_encode_String(dbPath, serializer);
+        sse_encode_String(ruleId, serializer);
+        sse_encode_f_64(amount, serializer);
+        sse_encode_String(frequency, serializer);
+        sse_encode_bool(autoApply, serializer);
+        pdeCallFfi(generalizedFrbRustBinding, serializer,
+            funcId: 49, port: port_);
+      },
+      codec: SseCodec(
+        decodeSuccessData: sse_decode_bool,
+        decodeErrorData: sse_decode_AnyhowException,
+      ),
+      constMeta: kCrateApiUpdateRecurringRuleConstMeta,
+      argValues: [dbPath, ruleId, amount, frequency, autoApply],
+      apiImpl: this,
+    ));
+  }
+
+  TaskConstMeta get kCrateApiUpdateRecurringRuleConstMeta =>
+      const TaskConstMeta(
+        debugName: "update_recurring_rule",
+        argNames: ["dbPath", "ruleId", "amount", "frequency", "autoApply"],
       );
 
   @protected
@@ -1625,13 +2094,14 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   CategoryDto dco_decode_category_dto(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 4)
-      throw Exception('unexpected arr length: expect 4 but see ${arr.length}');
+    if (arr.length != 5)
+      throw Exception('unexpected arr length: expect 5 but see ${arr.length}');
     return CategoryDto(
       id: dco_decode_String(arr[0]),
       name: dco_decode_String(arr[1]),
       icon: dco_decode_String(arr[2]),
       color: dco_decode_String(arr[3]),
+      isSystem: dco_decode_bool(arr[4]),
     );
   }
 
@@ -1698,6 +2168,22 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       savingsRate: dco_decode_f_64(arr[3]),
       topCategoryName: dco_decode_opt_String(arr[4]),
       topCategoryAmount: dco_decode_opt_box_autoadd_f_64(arr[5]),
+    );
+  }
+
+  @protected
+  HomeSummaryDto dco_decode_home_summary_dto(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 6)
+      throw Exception('unexpected arr length: expect 6 but see ${arr.length}');
+    return HomeSummaryDto(
+      totalBalance: dco_decode_f_64(arr[0]),
+      monthlyExpense: dco_decode_f_64(arr[1]),
+      monthlyIncome: dco_decode_f_64(arr[2]),
+      prevMonthExpense: dco_decode_f_64(arr[3]),
+      deltaExpensePct: dco_decode_opt_box_autoadd_f_64(arr[4]),
+      currency: dco_decode_String(arr[5]),
     );
   }
 
@@ -1818,8 +2304,8 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   MovementDto dco_decode_movement_dto(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 7)
-      throw Exception('unexpected arr length: expect 7 but see ${arr.length}');
+    if (arr.length != 9)
+      throw Exception('unexpected arr length: expect 9 but see ${arr.length}');
     return MovementDto(
       id: dco_decode_String(arr[0]),
       tipo: dco_decode_String(arr[1]),
@@ -1828,6 +2314,8 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       categoria: dco_decode_String(arr[4]),
       descripcion: dco_decode_String(arr[5]),
       fecha: dco_decode_String(arr[6]),
+      accountId: dco_decode_opt_String(arr[7]),
+      accountName: dco_decode_opt_String(arr[8]),
     );
   }
 
@@ -1913,6 +2401,19 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       color: dco_decode_String(arr[7]),
       icon: dco_decode_String(arr[8]),
       status: dco_decode_String(arr[9]),
+    );
+  }
+
+  @protected
+  StreakDto dco_decode_streak_dto(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 3)
+      throw Exception('unexpected arr length: expect 3 but see ${arr.length}');
+    return StreakDto(
+      currentStreak: dco_decode_i_32(arr[0]),
+      maxStreak: dco_decode_i_32(arr[1]),
+      activeToday: dco_decode_bool(arr[2]),
     );
   }
 
@@ -2135,8 +2636,13 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     var var_name = sse_decode_String(deserializer);
     var var_icon = sse_decode_String(deserializer);
     var var_color = sse_decode_String(deserializer);
+    var var_isSystem = sse_decode_bool(deserializer);
     return CategoryDto(
-        id: var_id, name: var_name, icon: var_icon, color: var_color);
+        id: var_id,
+        name: var_name,
+        icon: var_icon,
+        color: var_color,
+        isSystem: var_isSystem);
   }
 
   @protected
@@ -2207,6 +2713,24 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         savingsRate: var_savingsRate,
         topCategoryName: var_topCategoryName,
         topCategoryAmount: var_topCategoryAmount);
+  }
+
+  @protected
+  HomeSummaryDto sse_decode_home_summary_dto(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_totalBalance = sse_decode_f_64(deserializer);
+    var var_monthlyExpense = sse_decode_f_64(deserializer);
+    var var_monthlyIncome = sse_decode_f_64(deserializer);
+    var var_prevMonthExpense = sse_decode_f_64(deserializer);
+    var var_deltaExpensePct = sse_decode_opt_box_autoadd_f_64(deserializer);
+    var var_currency = sse_decode_String(deserializer);
+    return HomeSummaryDto(
+        totalBalance: var_totalBalance,
+        monthlyExpense: var_monthlyExpense,
+        monthlyIncome: var_monthlyIncome,
+        prevMonthExpense: var_prevMonthExpense,
+        deltaExpensePct: var_deltaExpensePct,
+        currency: var_currency);
   }
 
   @protected
@@ -2402,6 +2926,8 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     var var_categoria = sse_decode_String(deserializer);
     var var_descripcion = sse_decode_String(deserializer);
     var var_fecha = sse_decode_String(deserializer);
+    var var_accountId = sse_decode_opt_String(deserializer);
+    var var_accountName = sse_decode_opt_String(deserializer);
     return MovementDto(
         id: var_id,
         tipo: var_tipo,
@@ -2409,7 +2935,9 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         moneda: var_moneda,
         categoria: var_categoria,
         descripcion: var_descripcion,
-        fecha: var_fecha);
+        fecha: var_fecha,
+        accountId: var_accountId,
+        accountName: var_accountName);
   }
 
   @protected
@@ -2534,6 +3062,18 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         color: var_color,
         icon: var_icon,
         status: var_status);
+  }
+
+  @protected
+  StreakDto sse_decode_streak_dto(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_currentStreak = sse_decode_i_32(deserializer);
+    var var_maxStreak = sse_decode_i_32(deserializer);
+    var var_activeToday = sse_decode_bool(deserializer);
+    return StreakDto(
+        currentStreak: var_currentStreak,
+        maxStreak: var_maxStreak,
+        activeToday: var_activeToday);
   }
 
   @protected
@@ -2701,6 +3241,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     sse_encode_String(self.name, serializer);
     sse_encode_String(self.icon, serializer);
     sse_encode_String(self.color, serializer);
+    sse_encode_bool(self.isSystem, serializer);
   }
 
   @protected
@@ -2751,6 +3292,18 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     sse_encode_f_64(self.savingsRate, serializer);
     sse_encode_opt_String(self.topCategoryName, serializer);
     sse_encode_opt_box_autoadd_f_64(self.topCategoryAmount, serializer);
+  }
+
+  @protected
+  void sse_encode_home_summary_dto(
+      HomeSummaryDto self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_f_64(self.totalBalance, serializer);
+    sse_encode_f_64(self.monthlyExpense, serializer);
+    sse_encode_f_64(self.monthlyIncome, serializer);
+    sse_encode_f_64(self.prevMonthExpense, serializer);
+    sse_encode_opt_box_autoadd_f_64(self.deltaExpensePct, serializer);
+    sse_encode_String(self.currency, serializer);
   }
 
   @protected
@@ -2913,6 +3466,8 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     sse_encode_String(self.categoria, serializer);
     sse_encode_String(self.descripcion, serializer);
     sse_encode_String(self.fecha, serializer);
+    sse_encode_opt_String(self.accountId, serializer);
+    sse_encode_opt_String(self.accountName, serializer);
   }
 
   @protected
@@ -3007,6 +3562,14 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     sse_encode_String(self.color, serializer);
     sse_encode_String(self.icon, serializer);
     sse_encode_String(self.status, serializer);
+  }
+
+  @protected
+  void sse_encode_streak_dto(StreakDto self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.currentStreak, serializer);
+    sse_encode_i_32(self.maxStreak, serializer);
+    sse_encode_bool(self.activeToday, serializer);
   }
 
   @protected
