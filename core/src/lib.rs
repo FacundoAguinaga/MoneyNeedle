@@ -12,6 +12,7 @@ pub mod parse;
 pub mod needle_bridge;
 pub mod pipeline;
 pub mod api;
+pub mod migrations;
 pub mod store;
 
 #[derive(Debug, Clone, PartialEq)]

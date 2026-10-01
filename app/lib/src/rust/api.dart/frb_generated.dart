@@ -68,7 +68,7 @@ class RustLib extends BaseEntrypoint<RustLibApi, RustLibApiImpl, RustLibWire> {
   String get codegenVersion => '2.13.0';
 
   @override
-  int get rustContentHash => 487646629;
+  int get rustContentHash => 1158393454;
 
   static const kDefaultExternalLibraryLoaderConfig =
       ExternalLibraryLoaderConfig(
@@ -80,7 +80,7 @@ class RustLib extends BaseEntrypoint<RustLibApi, RustLibApiImpl, RustLibWire> {
 }
 
 abstract class RustLibApi extends BaseApi {
-  Future<PlatformInt64> crateApiConfirmMovement(
+  Future<String> crateApiConfirmMovement(
       {required String dbPath,
       required String tipo,
       required double monto,
@@ -89,6 +89,9 @@ abstract class RustLibApi extends BaseApi {
       required String descripcion,
       required String fecha,
       required String frase});
+
+  Future<bool> crateApiInitDatabase(
+      {required String dbPath, String? rawKeyHex});
 
   Future<List<MovementDto>> crateApiListMovements(
       {required String dbPath, required PlatformInt64 limit});
@@ -111,7 +114,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   });
 
   @override
-  Future<PlatformInt64> crateApiConfirmMovement(
+  Future<String> crateApiConfirmMovement(
       {required String dbPath,
       required String tipo,
       required double monto,
@@ -135,7 +138,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
             funcId: 1, port: port_);
       },
       codec: SseCodec(
-        decodeSuccessData: sse_decode_i_64,
+        decodeSuccessData: sse_decode_String,
         decodeErrorData: sse_decode_AnyhowException,
       ),
       constMeta: kCrateApiConfirmMovementConstMeta,
@@ -168,6 +171,32 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       );
 
   @override
+  Future<bool> crateApiInitDatabase(
+      {required String dbPath, String? rawKeyHex}) {
+    return handler.executeNormal(NormalTask(
+      callFfi: (port_) {
+        final serializer = SseSerializer(generalizedFrbRustBinding);
+        sse_encode_String(dbPath, serializer);
+        sse_encode_opt_String(rawKeyHex, serializer);
+        pdeCallFfi(generalizedFrbRustBinding, serializer,
+            funcId: 2, port: port_);
+      },
+      codec: SseCodec(
+        decodeSuccessData: sse_decode_bool,
+        decodeErrorData: sse_decode_AnyhowException,
+      ),
+      constMeta: kCrateApiInitDatabaseConstMeta,
+      argValues: [dbPath, rawKeyHex],
+      apiImpl: this,
+    ));
+  }
+
+  TaskConstMeta get kCrateApiInitDatabaseConstMeta => const TaskConstMeta(
+        debugName: "init_database",
+        argNames: ["dbPath", "rawKeyHex"],
+      );
+
+  @override
   Future<List<MovementDto>> crateApiListMovements(
       {required String dbPath, required PlatformInt64 limit}) {
     return handler.executeNormal(NormalTask(
@@ -176,7 +205,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         sse_encode_String(dbPath, serializer);
         sse_encode_i_64(limit, serializer);
         pdeCallFfi(generalizedFrbRustBinding, serializer,
-            funcId: 2, port: port_);
+            funcId: 3, port: port_);
       },
       codec: SseCodec(
         decodeSuccessData: sse_decode_list_movement_dto,
@@ -202,7 +231,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         sse_encode_String(query, serializer);
         sse_encode_String(fechaHoy, serializer);
         pdeCallFfi(generalizedFrbRustBinding, serializer,
-            funcId: 3, port: port_);
+            funcId: 4, port: port_);
       },
       codec: SseCodec(
         decodeSuccessData: sse_decode_proposal_dto,
@@ -231,7 +260,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         sse_encode_String(fechaHoy, serializer);
         sse_encode_String(cactPath, serializer);
         pdeCallFfi(generalizedFrbRustBinding, serializer,
-            funcId: 4, port: port_);
+            funcId: 5, port: port_);
       },
       codec: SseCodec(
         decodeSuccessData: sse_decode_proposal_dto,
@@ -297,7 +326,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     if (arr.length != 7)
       throw Exception('unexpected arr length: expect 7 but see ${arr.length}');
     return MovementDto(
-      id: dco_decode_i_64(arr[0]),
+      id: dco_decode_String(arr[0]),
       tipo: dco_decode_String(arr[1]),
       monto: dco_decode_f_64(arr[2]),
       moneda: dco_decode_String(arr[3]),
@@ -305,6 +334,12 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       descripcion: dco_decode_String(arr[5]),
       fecha: dco_decode_String(arr[6]),
     );
+  }
+
+  @protected
+  String? dco_decode_opt_String(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw == null ? null : dco_decode_String(raw);
   }
 
   @protected
@@ -389,7 +424,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   @protected
   MovementDto sse_decode_movement_dto(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
-    var var_id = sse_decode_i_64(deserializer);
+    var var_id = sse_decode_String(deserializer);
     var var_tipo = sse_decode_String(deserializer);
     var var_monto = sse_decode_f_64(deserializer);
     var var_moneda = sse_decode_String(deserializer);
@@ -404,6 +439,17 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         categoria: var_categoria,
         descripcion: var_descripcion,
         fecha: var_fecha);
+  }
+
+  @protected
+  String? sse_decode_opt_String(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    if (sse_decode_bool(deserializer)) {
+      return (sse_decode_String(deserializer));
+    } else {
+      return null;
+    }
   }
 
   @protected
@@ -493,13 +539,23 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   @protected
   void sse_encode_movement_dto(MovementDto self, SseSerializer serializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
-    sse_encode_i_64(self.id, serializer);
+    sse_encode_String(self.id, serializer);
     sse_encode_String(self.tipo, serializer);
     sse_encode_f_64(self.monto, serializer);
     sse_encode_String(self.moneda, serializer);
     sse_encode_String(self.categoria, serializer);
     sse_encode_String(self.descripcion, serializer);
     sse_encode_String(self.fecha, serializer);
+  }
+
+  @protected
+  void sse_encode_opt_String(String? self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    sse_encode_bool(self != null, serializer);
+    if (self != null) {
+      sse_encode_String(self, serializer);
+    }
   }
 
   @protected

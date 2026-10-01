@@ -23,5 +23,7 @@ required-features = ["needle-engine"]
 [dependencies]
 anyhow = "1.0.104"
 flutter_rust_bridge = "=2.13.0"
-rusqlite = { version = "0.40.2", features = ["bundled"] }
+rusqlite = { version = "0.40.2", features = ["bundled-sqlcipher"] }
 serde_json = "1.0.151"
+uuid = { version = "1.10", features = ["v7", "fast-rng"] }
+zeroize = { version = "1.8", features = ["zeroize_derive"] }

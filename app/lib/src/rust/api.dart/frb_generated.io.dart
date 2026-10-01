@@ -43,6 +43,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   MovementDto dco_decode_movement_dto(dynamic raw);
 
   @protected
+  String? dco_decode_opt_String(dynamic raw);
+
+  @protected
   ProposalDto dco_decode_proposal_dto(dynamic raw);
 
   @protected
@@ -74,6 +77,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   MovementDto sse_decode_movement_dto(SseDeserializer deserializer);
+
+  @protected
+  String? sse_decode_opt_String(SseDeserializer deserializer);
 
   @protected
   ProposalDto sse_decode_proposal_dto(SseDeserializer deserializer);
@@ -113,6 +119,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_movement_dto(MovementDto self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_opt_String(String? self, SseSerializer serializer);
 
   @protected
   void sse_encode_proposal_dto(ProposalDto self, SseSerializer serializer);
