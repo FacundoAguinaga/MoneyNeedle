@@ -144,6 +144,41 @@ pub fn confirm_movement(
         .map_err(|e| anyhow::anyhow!("{e}"))
 }
 
+/// DTO con los datos de creación inicial del vault.
+#[derive(Debug, Clone)]
+pub struct VaultInitDto {
+    pub raw_master_key_hex: String,
+    pub recovery_phrase: String,
+    pub wrapped_recovery_payload: String,
+}
+
+impl From<crate::vault::VaultInitResult> for VaultInitDto {
+    fn from(v: crate::vault::VaultInitResult) -> Self {
+        VaultInitDto {
+            raw_master_key_hex: v.raw_master_key_hex,
+            recovery_phrase: v.recovery_phrase,
+            wrapped_recovery_payload: v.wrapped_recovery_payload,
+        }
+    }
+}
+
+/// Genera una nueva Master Key aleatoria y la envuelve con 12 palabras BIP-39.
+pub fn create_vault(custom_passphrase: Option<String>) -> anyhow::Result<VaultInitDto> {
+    crate::vault::create_vault(custom_passphrase.as_deref())
+        .map(VaultInitDto::from)
+        .map_err(|e| anyhow::anyhow!("{e}"))
+}
+
+/// Desenvuelve la Master Key a partir del payload y la frase de recuperación.
+pub fn recover_master_key(
+    wrapped_recovery_payload: String,
+    recovery_phrase: String,
+) -> anyhow::Result<String> {
+    crate::vault::recover_master_key(&wrapped_recovery_payload, &recovery_phrase)
+        .map(|z| (*z).clone())
+        .map_err(|e| anyhow::anyhow!("{e}"))
+}
+
 /// Últimos movimientos para la lista.
 pub fn list_movements(db_path: String, limit: i64) -> anyhow::Result<Vec<MovementDto>> {
     let conn = store::open_default(&db_path).map_err(|e| anyhow::anyhow!("{e}"))?;

@@ -8,7 +8,7 @@ import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
 // These functions are ignored because they are not marked as `pub`: `engine`
 // These types are ignored because they are neither used by any `pub` functions nor (for structs and enums) marked `#[frb(unignore)]`: `Engine`
-// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `clone`, `clone`, `fmt`, `fmt`, `from`, `from`
+// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `clone`, `clone`, `clone`, `fmt`, `fmt`, `fmt`, `from`, `from`, `from`
 
 /// Pipeline con inferencia mockeada: verifica el cableado sin modelo.
 Future<ProposalDto> proposeMocked(
@@ -48,6 +48,19 @@ Future<String> confirmMovement(
         descripcion: descripcion,
         fecha: fecha,
         frase: frase);
+
+/// Genera una nueva Master Key aleatoria y la envuelve con 12 palabras BIP-39.
+Future<VaultInitDto> createVault({String? customPassphrase}) =>
+    RustLib.instance.api
+        .crateApiCreateVault(customPassphrase: customPassphrase);
+
+/// Desenvuelve la Master Key a partir del payload y la frase de recuperación.
+Future<String> recoverMasterKey(
+        {required String wrappedRecoveryPayload,
+        required String recoveryPhrase}) =>
+    RustLib.instance.api.crateApiRecoverMasterKey(
+        wrappedRecoveryPayload: wrappedRecoveryPayload,
+        recoveryPhrase: recoveryPhrase);
 
 /// Últimos movimientos para la lista.
 Future<List<MovementDto>> listMovements(
@@ -136,4 +149,32 @@ class ProposalDto {
           moneda == other.moneda &&
           fecha == other.fecha &&
           grounded == other.grounded;
+}
+
+/// DTO con los datos de creación inicial del vault.
+class VaultInitDto {
+  final String rawMasterKeyHex;
+  final String recoveryPhrase;
+  final String wrappedRecoveryPayload;
+
+  const VaultInitDto({
+    required this.rawMasterKeyHex,
+    required this.recoveryPhrase,
+    required this.wrappedRecoveryPayload,
+  });
+
+  @override
+  int get hashCode =>
+      rawMasterKeyHex.hashCode ^
+      recoveryPhrase.hashCode ^
+      wrappedRecoveryPayload.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is VaultInitDto &&
+          runtimeType == other.runtimeType &&
+          rawMasterKeyHex == other.rawMasterKeyHex &&
+          recoveryPhrase == other.recoveryPhrase &&
+          wrappedRecoveryPayload == other.wrappedRecoveryPayload;
 }

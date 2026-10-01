@@ -5,7 +5,7 @@ import android.os.Bundle
 import android.speech.RecognitionListener
 import android.speech.RecognizerIntent
 import android.speech.SpeechRecognizer
-import io.flutter.embedding.android.FlutterActivity
+import io.flutter.embedding.android.FlutterFragmentActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
 
@@ -13,7 +13,7 @@ import io.flutter.plugin.common.MethodChannel
  *  Canal "moneyneedle/stt": isAvailable() / listen() -> texto final | error.
  *  El permiso RECORD_AUDIO lo pide Flutter (permission_handler) antes de llamar.
  */
-class MainActivity : FlutterActivity() {
+class MainActivity : FlutterFragmentActivity() {
     private val channel = "moneyneedle/stt"
     private var recognizer: SpeechRecognizer? = null
     private var pending: MethodChannel.Result? = null
