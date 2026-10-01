@@ -18,8 +18,9 @@ dueño: Facundo. Fecha: sep-oct 2026.
   entrenar y medir; el chat Rust se descartó a propósito).
 - Modelo: `tuned2.cact` (48% exacto held-out). Corre en el teléfono a
   ~1248 tps prefill / 303 decode, 129MB RAM.
-- `main` al día (PRs #2-#6). Persistencia migrada a SQLCipher con modelo
-  relacional v1 (UUID v7, centavos, cuotas, recurrentes, FX). Ramas borradas tras mergear.
+- `main` al día (PRs #2-#7). Persistencia migrada a SQLCipher con modelo
+  relacional v1 y ciclo de seguridad completo: key wrapping con 12 palabras BIP-39,
+  Argon2id, AES-256-GCM y hardware Keystore con biometría en Flutter.
 - Siguiente paso: construir la app con el stack definido (ver abajo y `docs/stack.md`).
 
 ## Stack definido (2026-09-30)
