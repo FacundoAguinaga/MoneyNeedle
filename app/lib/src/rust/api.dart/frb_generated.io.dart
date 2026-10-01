@@ -40,6 +40,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   int dco_decode_box_autoadd_i_32(dynamic raw);
 
   @protected
+  PlatformInt64 dco_decode_box_autoadd_i_64(dynamic raw);
+
+  @protected
+  BudgetStatusDto dco_decode_budget_status_dto(dynamic raw);
+
+  @protected
   CardStatementDto dco_decode_card_statement_dto(dynamic raw);
 
   @protected
@@ -47,6 +53,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   CashflowItemDto dco_decode_cashflow_item_dto(dynamic raw);
+
+  @protected
+  CategoryDto dco_decode_category_dto(dynamic raw);
 
   @protected
   CategoryReportDto dco_decode_category_report_dto(dynamic raw);
@@ -76,11 +85,17 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   List<AccountDto> dco_decode_list_account_dto(dynamic raw);
 
   @protected
+  List<BudgetStatusDto> dco_decode_list_budget_status_dto(dynamic raw);
+
+  @protected
   List<CardStatementItemDto> dco_decode_list_card_statement_item_dto(
       dynamic raw);
 
   @protected
   List<CashflowItemDto> dco_decode_list_cashflow_item_dto(dynamic raw);
+
+  @protected
+  List<CategoryDto> dco_decode_list_category_dto(dynamic raw);
 
   @protected
   List<CategorySpendingDto> dco_decode_list_category_spending_dto(dynamic raw);
@@ -102,6 +117,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   List<RecurringRuleDto> dco_decode_list_recurring_rule_dto(dynamic raw);
 
   @protected
+  List<SavingGoalDto> dco_decode_list_saving_goal_dto(dynamic raw);
+
+  @protected
   MovementDto dco_decode_movement_dto(dynamic raw);
 
   @protected
@@ -117,10 +135,16 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   int? dco_decode_opt_box_autoadd_i_32(dynamic raw);
 
   @protected
+  PlatformInt64? dco_decode_opt_box_autoadd_i_64(dynamic raw);
+
+  @protected
   ProposalDto dco_decode_proposal_dto(dynamic raw);
 
   @protected
   RecurringRuleDto dco_decode_recurring_rule_dto(dynamic raw);
+
+  @protected
+  SavingGoalDto dco_decode_saving_goal_dto(dynamic raw);
 
   @protected
   int dco_decode_u_8(dynamic raw);
@@ -154,6 +178,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   int sse_decode_box_autoadd_i_32(SseDeserializer deserializer);
 
   @protected
+  PlatformInt64 sse_decode_box_autoadd_i_64(SseDeserializer deserializer);
+
+  @protected
+  BudgetStatusDto sse_decode_budget_status_dto(SseDeserializer deserializer);
+
+  @protected
   CardStatementDto sse_decode_card_statement_dto(SseDeserializer deserializer);
 
   @protected
@@ -162,6 +192,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   CashflowItemDto sse_decode_cashflow_item_dto(SseDeserializer deserializer);
+
+  @protected
+  CategoryDto sse_decode_category_dto(SseDeserializer deserializer);
 
   @protected
   CategoryReportDto sse_decode_category_report_dto(
@@ -194,12 +227,19 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   List<AccountDto> sse_decode_list_account_dto(SseDeserializer deserializer);
 
   @protected
+  List<BudgetStatusDto> sse_decode_list_budget_status_dto(
+      SseDeserializer deserializer);
+
+  @protected
   List<CardStatementItemDto> sse_decode_list_card_statement_item_dto(
       SseDeserializer deserializer);
 
   @protected
   List<CashflowItemDto> sse_decode_list_cashflow_item_dto(
       SseDeserializer deserializer);
+
+  @protected
+  List<CategoryDto> sse_decode_list_category_dto(SseDeserializer deserializer);
 
   @protected
   List<CategorySpendingDto> sse_decode_list_category_spending_dto(
@@ -224,6 +264,10 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
       SseDeserializer deserializer);
 
   @protected
+  List<SavingGoalDto> sse_decode_list_saving_goal_dto(
+      SseDeserializer deserializer);
+
+  @protected
   MovementDto sse_decode_movement_dto(SseDeserializer deserializer);
 
   @protected
@@ -240,10 +284,16 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   int? sse_decode_opt_box_autoadd_i_32(SseDeserializer deserializer);
 
   @protected
+  PlatformInt64? sse_decode_opt_box_autoadd_i_64(SseDeserializer deserializer);
+
+  @protected
   ProposalDto sse_decode_proposal_dto(SseDeserializer deserializer);
 
   @protected
   RecurringRuleDto sse_decode_recurring_rule_dto(SseDeserializer deserializer);
+
+  @protected
+  SavingGoalDto sse_decode_saving_goal_dto(SseDeserializer deserializer);
 
   @protected
   int sse_decode_u_8(SseDeserializer deserializer);
@@ -278,6 +328,14 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_encode_box_autoadd_i_32(int self, SseSerializer serializer);
 
   @protected
+  void sse_encode_box_autoadd_i_64(
+      PlatformInt64 self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_budget_status_dto(
+      BudgetStatusDto self, SseSerializer serializer);
+
+  @protected
   void sse_encode_card_statement_dto(
       CardStatementDto self, SseSerializer serializer);
 
@@ -288,6 +346,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_cashflow_item_dto(
       CashflowItemDto self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_category_dto(CategoryDto self, SseSerializer serializer);
 
   @protected
   void sse_encode_category_report_dto(
@@ -323,12 +384,20 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
       List<AccountDto> self, SseSerializer serializer);
 
   @protected
+  void sse_encode_list_budget_status_dto(
+      List<BudgetStatusDto> self, SseSerializer serializer);
+
+  @protected
   void sse_encode_list_card_statement_item_dto(
       List<CardStatementItemDto> self, SseSerializer serializer);
 
   @protected
   void sse_encode_list_cashflow_item_dto(
       List<CashflowItemDto> self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_list_category_dto(
+      List<CategoryDto> self, SseSerializer serializer);
 
   @protected
   void sse_encode_list_category_spending_dto(
@@ -355,6 +424,10 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
       List<RecurringRuleDto> self, SseSerializer serializer);
 
   @protected
+  void sse_encode_list_saving_goal_dto(
+      List<SavingGoalDto> self, SseSerializer serializer);
+
+  @protected
   void sse_encode_movement_dto(MovementDto self, SseSerializer serializer);
 
   @protected
@@ -371,11 +444,18 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_encode_opt_box_autoadd_i_32(int? self, SseSerializer serializer);
 
   @protected
+  void sse_encode_opt_box_autoadd_i_64(
+      PlatformInt64? self, SseSerializer serializer);
+
+  @protected
   void sse_encode_proposal_dto(ProposalDto self, SseSerializer serializer);
 
   @protected
   void sse_encode_recurring_rule_dto(
       RecurringRuleDto self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_saving_goal_dto(SavingGoalDto self, SseSerializer serializer);
 
   @protected
   void sse_encode_u_8(int self, SseSerializer serializer);

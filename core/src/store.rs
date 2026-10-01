@@ -464,6 +464,46 @@ pub fn get_or_create_category(conn: &Connection, name: &str) -> Result<[u8; 16],
 }
 
 #[derive(Debug, Clone, PartialEq)]
+pub struct CategoryInfo {
+    pub id: String,
+    pub name: String,
+    pub icon: String,
+    pub color: String,
+}
+
+pub fn list_categories(conn: &Connection) -> Result<Vec<CategoryInfo>, String> {
+    let mut stmt = conn
+        .prepare(
+            "SELECT id, name, icon, color
+             FROM categories
+             WHERE deleted_at IS NULL
+             ORDER BY is_system DESC, name ASC",
+        )
+        .map_err(|e| e.to_string())?;
+
+    let rows = stmt
+        .query_map([], |row| {
+            let id_raw: Vec<u8> = row.get(0)?;
+            let mut id_bytes = [0u8; 16];
+            id_bytes.copy_from_slice(&id_raw);
+
+            Ok(CategoryInfo {
+                id: Uuid::from_bytes(id_bytes).to_string(),
+                name: row.get(1)?,
+                icon: row.get(2)?,
+                color: row.get(3)?,
+            })
+        })
+        .map_err(|e| e.to_string())?;
+
+    let mut out = Vec::new();
+    for r in rows {
+        out.push(r.map_err(|e| e.to_string())?);
+    }
+    Ok(out)
+}
+
+#[derive(Debug, Clone, PartialEq)]
 pub struct AccountWithBalance {
     pub id: String,
     pub name: String,
@@ -1758,6 +1798,320 @@ pub fn get_financial_kpis(
     })
 }
 
+// ============================================================================
+// Presupuestos y Metas de Ahorro (Fase 5)
+// ============================================================================
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct BudgetStatus {
+    pub id: String,
+    pub category_id: String,
+    pub category_name: String,
+    pub category_color: String,
+    pub category_icon: String,
+    pub currency: String,
+    pub budget_amount_cents: i64,
+    pub spent_amount_cents: i64,
+    pub remaining_amount_cents: i64,
+    pub spent_percentage: f64,
+    pub is_over_budget: bool,
+    pub is_warning: bool,
+}
+
+/// Define o actualiza el límite presupuestario mensual de una categoría.
+pub fn set_category_budget(
+    conn: &Connection,
+    category_id: &[u8; 16],
+    currency: &str,
+    amount_cents: i64,
+    alert_percentage: i32,
+) -> Result<String, String> {
+    if amount_cents <= 0 {
+        return Err("El monto del presupuesto debe ser mayor a 0".into());
+    }
+    let now = now_ms();
+
+    let existing_id: Option<Vec<u8>> = conn
+        .query_row(
+            "SELECT id FROM budgets WHERE category_id = ?1 AND currency = ?2 AND deleted_at IS NULL",
+            params![category_id.as_slice(), currency],
+            |r| r.get(0),
+        )
+        .optional()
+        .map_err(|e| e.to_string())?;
+
+    if let Some(raw_id) = existing_id {
+        conn.execute(
+            "UPDATE budgets SET amount = ?1, alert_percentage = ?2, updated_at = ?3 WHERE id = ?4",
+            params![amount_cents, alert_percentage, now, raw_id.as_slice()],
+        )
+        .map_err(|e| e.to_string())?;
+
+        let mut b = [0u8; 16];
+        b.copy_from_slice(&raw_id);
+        Ok(Uuid::from_bytes(b).to_string())
+    } else {
+        let budget_id = Uuid::now_v7();
+        conn.execute(
+            "INSERT INTO budgets (id, category_id, currency, amount, alert_percentage, created_at, updated_at)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?6)",
+            params![
+                budget_id.as_bytes().as_slice(),
+                category_id.as_slice(),
+                currency,
+                amount_cents,
+                alert_percentage,
+                now
+            ],
+        )
+        .map_err(|e| e.to_string())?;
+        Ok(budget_id.to_string())
+    }
+}
+
+/// Consulta el estado de todos los presupuestos activos contra los gastos del período [start_ms, end_ms].
+pub fn list_budgets_status(
+    conn: &Connection,
+    start_ms: i64,
+    end_ms: i64,
+    currency: &str,
+) -> Result<Vec<BudgetStatus>, String> {
+    let mut stmt = conn
+        .prepare(
+            "SELECT b.id, b.category_id, c.name, c.color, c.icon, b.currency, b.amount, b.alert_percentage
+             FROM budgets b
+             JOIN categories c ON b.category_id = c.id
+             WHERE b.deleted_at IS NULL AND b.currency = ?1
+             ORDER BY b.amount DESC",
+        )
+        .map_err(|e| e.to_string())?;
+
+    let budget_rows = stmt
+        .query_map(params![currency], |row| {
+            let b_id_raw: Vec<u8> = row.get(0)?;
+            let c_id_raw: Vec<u8> = row.get(1)?;
+            let c_name: String = row.get(2)?;
+            let c_color: String = row.get(3)?;
+            let c_icon: String = row.get(4)?;
+            let curr: String = row.get(5)?;
+            let limit: i64 = row.get(6)?;
+            let alert_pct: i32 = row.get(7)?;
+
+            let mut b_id = [0u8; 16];
+            b_id.copy_from_slice(&b_id_raw);
+            let mut c_id = [0u8; 16];
+            c_id.copy_from_slice(&c_id_raw);
+
+            Ok((
+                Uuid::from_bytes(b_id).to_string(),
+                c_id,
+                Uuid::from_bytes(c_id).to_string(),
+                c_name,
+                c_color,
+                c_icon,
+                curr,
+                limit,
+                alert_pct,
+            ))
+        })
+        .map_err(|e| e.to_string())?;
+
+    let mut out = Vec::new();
+    for r in budget_rows {
+        let (bid_str, cid_bytes, cid_str, cname, ccolor, cicon, curr, limit_cents, alert_pct) =
+            r.map_err(|e| e.to_string())?;
+
+        let spent: i64 = conn
+            .query_row(
+                "SELECT COALESCE(SUM(amount), 0)
+                 FROM transactions
+                 WHERE deleted_at IS NULL
+                   AND category_id = ?1
+                   AND currency = ?2
+                   AND transaction_type = 'expense'
+                   AND date >= ?3
+                   AND date <= ?4",
+                params![cid_bytes.as_slice(), curr, start_ms, end_ms],
+                |row| row.get(0),
+            )
+            .unwrap_or(0);
+
+        let remaining = limit_cents - spent;
+        let pct = if limit_cents > 0 {
+            ((spent as f64 / limit_cents as f64) * 10000.0).round() / 100.0
+        } else {
+            0.0
+        };
+
+        let is_over = spent > limit_cents;
+        let is_warn = pct >= alert_pct as f64;
+
+        out.push(BudgetStatus {
+            id: bid_str,
+            category_id: cid_str,
+            category_name: cname,
+            category_color: ccolor,
+            category_icon: cicon,
+            currency: curr,
+            budget_amount_cents: limit_cents,
+            spent_amount_cents: spent,
+            remaining_amount_cents: remaining,
+            spent_percentage: pct,
+            is_over_budget: is_over,
+            is_warning: is_warn,
+        });
+    }
+
+    Ok(out)
+}
+
+/// Elimina un presupuesto (soft-delete).
+pub fn delete_budget(conn: &Connection, budget_id: &[u8; 16]) -> Result<bool, String> {
+    let now = now_ms();
+    let rows = conn
+        .execute(
+            "UPDATE budgets SET deleted_at = ?1 WHERE id = ?2 AND deleted_at IS NULL",
+            params![now, budget_id.as_slice()],
+        )
+        .map_err(|e| e.to_string())?;
+    Ok(rows > 0)
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct SavingGoalRecord {
+    pub id: String,
+    pub name: String,
+    pub target_amount_cents: i64,
+    pub current_amount_cents: i64,
+    pub currency: String,
+    pub target_date: Option<i64>,
+    pub color: String,
+    pub icon: String,
+    pub status: String,
+}
+
+/// Crea una nueva meta de ahorro.
+pub fn create_saving_goal(
+    conn: &Connection,
+    name: &str,
+    target_amount_cents: i64,
+    currency: &str,
+    target_date: Option<i64>,
+    color: &str,
+    icon: &str,
+) -> Result<String, String> {
+    if target_amount_cents <= 0 {
+        return Err("El monto objetivo debe ser mayor a 0".into());
+    }
+    let id = Uuid::now_v7();
+    let now = now_ms();
+    conn.execute(
+        "INSERT INTO saving_goals (id, name, target_amount, currency, target_date, color, icon, current_amount, status, created_at, updated_at)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, 0, 'active', ?8, ?8)",
+        params![
+            id.as_bytes().as_slice(),
+            name,
+            target_amount_cents,
+            currency,
+            target_date,
+            color,
+            icon,
+            now,
+        ],
+    )
+    .map_err(|e| e.to_string())?;
+    Ok(id.to_string())
+}
+
+/// Lista todas las metas de ahorro activas o pausadas.
+pub fn list_saving_goals(conn: &Connection) -> Result<Vec<SavingGoalRecord>, String> {
+    let mut stmt = conn
+        .prepare(
+            "SELECT id, name, target_amount, current_amount, currency, target_date, color, icon, status
+             FROM saving_goals
+             WHERE deleted_at IS NULL
+             ORDER BY created_at DESC",
+        )
+        .map_err(|e| e.to_string())?;
+
+    let rows = stmt
+        .query_map([], |row| {
+            let id_raw: Vec<u8> = row.get(0)?;
+            let mut id_bytes = [0u8; 16];
+            id_bytes.copy_from_slice(&id_raw);
+
+            Ok(SavingGoalRecord {
+                id: Uuid::from_bytes(id_bytes).to_string(),
+                name: row.get(1)?,
+                target_amount_cents: row.get(2)?,
+                current_amount_cents: row.get(3)?,
+                currency: row.get(4)?,
+                target_date: row.get(5)?,
+                color: row.get(6)?,
+                icon: row.get(7)?,
+                status: row.get(8)?,
+            })
+        })
+        .map_err(|e| e.to_string())?;
+
+    let mut out = Vec::new();
+    for r in rows {
+        out.push(r.map_err(|e| e.to_string())?);
+    }
+    Ok(out)
+}
+
+/// Registra un aporte (positivo o negativo) a una meta de ahorro.
+pub fn contribute_to_saving_goal(
+    conn: &Connection,
+    goal_id: &[u8; 16],
+    amount_cents: i64,
+) -> Result<i64, String> {
+    let now = now_ms();
+    let current: i64 = conn
+        .query_row(
+            "SELECT current_amount FROM saving_goals WHERE id = ?1 AND deleted_at IS NULL",
+            params![goal_id.as_slice()],
+            |r| r.get(0),
+        )
+        .map_err(|e| format!("Meta de ahorro no encontrada: {e}"))?;
+
+    let new_amount = (current + amount_cents).max(0);
+    let target: i64 = conn
+        .query_row(
+            "SELECT target_amount FROM saving_goals WHERE id = ?1 AND deleted_at IS NULL",
+            params![goal_id.as_slice()],
+            |r| r.get(0),
+        )
+        .unwrap_or(0);
+
+    let status = if new_amount >= target && target > 0 {
+        "completed"
+    } else {
+        "active"
+    };
+
+    conn.execute(
+        "UPDATE saving_goals SET current_amount = ?1, status = ?2, updated_at = ?3 WHERE id = ?4",
+        params![new_amount, status, now, goal_id.as_slice()],
+    )
+    .map_err(|e| e.to_string())?;
+
+    Ok(new_amount)
+}
+
+/// Elimina una meta de ahorro (soft-delete).
+pub fn delete_saving_goal(conn: &Connection, goal_id: &[u8; 16]) -> Result<bool, String> {
+    let now = now_ms();
+    let rows = conn
+        .execute(
+            "UPDATE saving_goals SET deleted_at = ?1 WHERE id = ?2 AND deleted_at IS NULL",
+            params![now, goal_id.as_slice()],
+        )
+        .map_err(|e| e.to_string())?;
+    Ok(rows > 0)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -2111,6 +2465,98 @@ mod tests {
         assert_eq!(proj[1].total_cents, 1000000);
         assert_eq!(proj[2].cycle_month, 12);
         assert_eq!(proj[2].total_cents, 1000000);
+    }
+
+    #[test]
+    fn test_budgets_and_saving_goals_flow() {
+        let conn = mem();
+        let accounts = list_accounts(&conn).unwrap();
+        let cash = &accounts[0];
+        let cash_uuid = Uuid::parse_str(&cash.id).unwrap();
+        let cash_bytes = cash_uuid.as_bytes();
+        let now = now_ms();
+        let start_ms = now - 86400 * 1000;
+        let end_ms = now + 86400 * 1000;
+
+        let cat_super_id = get_or_create_category(&conn, "Supermercado").unwrap();
+
+        // 1. Presupuesto
+        let b_id_str = set_category_budget(
+            &conn,
+            &cat_super_id,
+            "ARS",
+            10000000, // $100.000 ARS
+            80,
+        ).unwrap();
+        let b_uuid = Uuid::parse_str(&b_id_str).unwrap();
+
+        // Inicial: 0 gastado
+        let status1 = list_budgets_status(&conn, start_ms, end_ms, "ARS").unwrap();
+        assert_eq!(status1.len(), 1);
+        assert_eq!(status1[0].budget_amount_cents, 10000000);
+        assert_eq!(status1[0].spent_amount_cents, 0);
+        assert_eq!(status1[0].remaining_amount_cents, 10000000);
+        assert_eq!(status1[0].is_warning, false);
+        assert_eq!(status1[0].is_over_budget, false);
+
+        // Gasto de $85.000 (85%)
+        let mut conn_mut = conn;
+        let tx = conn_mut.transaction().unwrap();
+        let tx1_id = Uuid::now_v7();
+        tx.execute(
+            "INSERT INTO transactions (id, account_id, category_id, transaction_type, amount, currency, notes, date, raw_prompt, created_at, updated_at)
+             VALUES (?1, ?2, ?3, 'expense', 8500000, 'ARS', 'Gasto súper', ?4, 'super 85k', ?4, ?4)",
+            params![tx1_id.as_bytes().as_slice(), cash_bytes.as_slice(), cat_super_id.as_slice(), now],
+        ).unwrap();
+        tx.commit().unwrap();
+        let conn = conn_mut;
+
+        let status2 = list_budgets_status(&conn, start_ms, end_ms, "ARS").unwrap();
+        assert_eq!(status2[0].spent_amount_cents, 8500000);
+        assert_eq!(status2[0].remaining_amount_cents, 1500000);
+        assert_eq!(status2[0].spent_percentage, 85.0);
+        assert_eq!(status2[0].is_warning, true);
+        assert_eq!(status2[0].is_over_budget, false);
+
+        // Borrar presupuesto
+        assert!(delete_budget(&conn, b_uuid.as_bytes()).unwrap());
+        let status3 = list_budgets_status(&conn, start_ms, end_ms, "ARS").unwrap();
+        assert_eq!(status3.len(), 0);
+
+        // 2. Metas de ahorro
+        let goal_id_str = create_saving_goal(
+            &conn,
+            "Vacaciones Japón",
+            200000000, // $2.000.000
+            "ARS",
+            Some(now + 86400 * 30 * 1000),
+            "#2196F3",
+            "flight",
+        ).unwrap();
+        let goal_uuid = Uuid::parse_str(&goal_id_str).unwrap();
+
+        let goals = list_saving_goals(&conn).unwrap();
+        assert_eq!(goals.len(), 1);
+        assert_eq!(goals[0].name, "Vacaciones Japón");
+        assert_eq!(goals[0].current_amount_cents, 0);
+        assert_eq!(goals[0].status, "active");
+
+        // Aporte parcial: $1.200.000
+        let new_bal1 = contribute_to_saving_goal(&conn, goal_uuid.as_bytes(), 120000000).unwrap();
+        assert_eq!(new_bal1, 120000000);
+        let goals2 = list_saving_goals(&conn).unwrap();
+        assert_eq!(goals2[0].current_amount_cents, 120000000);
+        assert_eq!(goals2[0].status, "active");
+
+        // Completar meta: $900.000 más ($2.100.000)
+        let new_bal2 = contribute_to_saving_goal(&conn, goal_uuid.as_bytes(), 90000000).unwrap();
+        assert_eq!(new_bal2, 210000000);
+        let goals3 = list_saving_goals(&conn).unwrap();
+        assert_eq!(goals3[0].status, "completed");
+
+        // Borrar meta
+        assert!(delete_saving_goal(&conn, goal_uuid.as_bytes()).unwrap());
+        assert_eq!(list_saving_goals(&conn).unwrap().len(), 0);
     }
 }
 

@@ -692,6 +692,183 @@ pub fn get_financial_kpis(
     })
 }
 
+// ============================================================================
+// Presupuestos y Metas de Ahorro (Fase 5)
+// ============================================================================
+
+#[derive(Debug, Clone)]
+pub struct BudgetStatusDto {
+    pub id: String,
+    pub category_id: String,
+    pub category_name: String,
+    pub category_color: String,
+    pub category_icon: String,
+    pub currency: String,
+    pub budget_amount: f64,
+    pub spent_amount: f64,
+    pub remaining_amount: f64,
+    pub spent_percentage: f64,
+    pub is_over_budget: bool,
+    pub is_warning: bool,
+}
+
+#[derive(Debug, Clone)]
+pub struct SavingGoalDto {
+    pub id: String,
+    pub name: String,
+    pub target_amount: f64,
+    pub current_amount: f64,
+    pub progress_percentage: f64,
+    pub currency: String,
+    pub target_date: Option<i64>,
+    pub color: String,
+    pub icon: String,
+    pub status: String,
+}
+
+/// Define o actualiza el límite mensual de una categoría.
+pub fn set_category_budget(
+    db_path: String,
+    category_id: String,
+    currency: String,
+    amount: f64,
+    alert_percentage: i32,
+) -> anyhow::Result<String> {
+    let conn = store::open_default(&db_path).map_err(|e| anyhow::anyhow!("{e}"))?;
+    let u = uuid::Uuid::parse_str(&category_id).map_err(|e| anyhow::anyhow!("{e}"))?;
+    let cents = (amount * 100.0).round() as i64;
+    store::set_category_budget(&conn, u.as_bytes(), &currency, cents, alert_percentage)
+        .map_err(|e| anyhow::anyhow!("{e}"))
+}
+
+/// Consulta el estado de todos los presupuestos activos contra los consumos del período.
+pub fn list_budgets_status(
+    db_path: String,
+    start_date_ms: i64,
+    end_date_ms: i64,
+    currency: String,
+) -> anyhow::Result<Vec<BudgetStatusDto>> {
+    let conn = store::open_default(&db_path).map_err(|e| anyhow::anyhow!("{e}"))?;
+    let list = store::list_budgets_status(&conn, start_date_ms, end_date_ms, &currency)
+        .map_err(|e| anyhow::anyhow!("{e}"))?;
+
+    Ok(list
+        .into_iter()
+        .map(|b| BudgetStatusDto {
+            id: b.id,
+            category_id: b.category_id,
+            category_name: b.category_name,
+            category_color: b.category_color,
+            category_icon: b.category_icon,
+            currency: b.currency,
+            budget_amount: b.budget_amount_cents as f64 / 100.0,
+            spent_amount: b.spent_amount_cents as f64 / 100.0,
+            remaining_amount: b.remaining_amount_cents as f64 / 100.0,
+            spent_percentage: b.spent_percentage,
+            is_over_budget: b.is_over_budget,
+            is_warning: b.is_warning,
+        })
+        .collect())
+}
+
+/// Elimina un presupuesto.
+pub fn delete_budget(db_path: String, budget_id: String) -> anyhow::Result<bool> {
+    let conn = store::open_default(&db_path).map_err(|e| anyhow::anyhow!("{e}"))?;
+    let u = uuid::Uuid::parse_str(&budget_id).map_err(|e| anyhow::anyhow!("{e}"))?;
+    store::delete_budget(&conn, u.as_bytes()).map_err(|e| anyhow::anyhow!("{e}"))
+}
+
+/// Crea una nueva meta de ahorro.
+pub fn create_saving_goal(
+    db_path: String,
+    name: String,
+    target_amount: f64,
+    currency: String,
+    target_date: Option<i64>,
+    color: String,
+    icon: String,
+) -> anyhow::Result<String> {
+    let conn = store::open_default(&db_path).map_err(|e| anyhow::anyhow!("{e}"))?;
+    let cents = (target_amount * 100.0).round() as i64;
+    store::create_saving_goal(&conn, &name, cents, &currency, target_date, &color, &icon)
+        .map_err(|e| anyhow::anyhow!("{e}"))
+}
+
+/// Lista todas las metas de ahorro.
+pub fn list_saving_goals(db_path: String) -> anyhow::Result<Vec<SavingGoalDto>> {
+    let conn = store::open_default(&db_path).map_err(|e| anyhow::anyhow!("{e}"))?;
+    let list = store::list_saving_goals(&conn).map_err(|e| anyhow::anyhow!("{e}"))?;
+
+    Ok(list
+        .into_iter()
+        .map(|g| {
+            let target = g.target_amount_cents as f64 / 100.0;
+            let current = g.current_amount_cents as f64 / 100.0;
+            let pct = if target > 0.0 {
+                ((current / target) * 10000.0).round() / 100.0
+            } else {
+                0.0
+            };
+            SavingGoalDto {
+                id: g.id,
+                name: g.name,
+                target_amount: target,
+                current_amount: current,
+                progress_percentage: pct,
+                currency: g.currency,
+                target_date: g.target_date,
+                color: g.color,
+                icon: g.icon,
+                status: g.status,
+            }
+        })
+        .collect())
+}
+
+/// Aporta una cantidad (o deduce) a una meta de ahorro.
+pub fn contribute_to_saving_goal(
+    db_path: String,
+    goal_id: String,
+    amount: f64,
+) -> anyhow::Result<f64> {
+    let conn = store::open_default(&db_path).map_err(|e| anyhow::anyhow!("{e}"))?;
+    let u = uuid::Uuid::parse_str(&goal_id).map_err(|e| anyhow::anyhow!("{e}"))?;
+    let cents = (amount * 100.0).round() as i64;
+    let new_cents = store::contribute_to_saving_goal(&conn, u.as_bytes(), cents)
+        .map_err(|e| anyhow::anyhow!("{e}"))?;
+    Ok(new_cents as f64 / 100.0)
+}
+
+/// Elimina una meta de ahorro.
+pub fn delete_saving_goal(db_path: String, goal_id: String) -> anyhow::Result<bool> {
+    let conn = store::open_default(&db_path).map_err(|e| anyhow::anyhow!("{e}"))?;
+    let u = uuid::Uuid::parse_str(&goal_id).map_err(|e| anyhow::anyhow!("{e}"))?;
+    store::delete_saving_goal(&conn, u.as_bytes()).map_err(|e| anyhow::anyhow!("{e}"))
+}
+
+#[derive(Debug, Clone)]
+pub struct CategoryDto {
+    pub id: String,
+    pub name: String,
+    pub icon: String,
+    pub color: String,
+}
+
+/// Lista todas las categorías activas.
+pub fn list_categories(db_path: String) -> anyhow::Result<Vec<CategoryDto>> {
+    let conn = store::open_default(&db_path).map_err(|e| anyhow::anyhow!("{e}"))?;
+    let list = store::list_categories(&conn).map_err(|e| anyhow::anyhow!("{e}"))?;
+    Ok(list
+        .into_iter()
+        .map(|c| CategoryDto {
+            id: c.id,
+            name: c.name,
+            icon: c.icon,
+            color: c.color,
+        })
+        .collect())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1017,6 +1194,84 @@ mod tests {
         assert_eq!(commitments[0].total_amount, 10_000.0);
         assert_eq!(commitments[1].cycle_month, 12);
         assert_eq!(commitments[1].total_amount, 10_000.0);
+
+        let _ = std::fs::remove_file(&db_path);
+    }
+
+    #[test]
+    fn api_budgets_and_saving_goals_test() {
+        let db_path = format!("/tmp/test_api_budgets_{}.db", store::now_ms());
+        let _ = std::fs::remove_file(&db_path);
+
+        init_database(db_path.clone(), None).unwrap();
+        let accs = list_accounts(db_path.clone()).unwrap();
+        let cash_id = accs[0].id.clone();
+
+        let now = store::now_ms();
+        let start_ms = now - 86400 * 1000;
+        let end_ms = now + 86400 * 1000;
+
+        // Categoría y presupuesto
+        confirm_movement(
+            db_path.clone(),
+            "gasto".into(),
+            75_000.0,
+            "ARS".into(),
+            "supermercado".into(),
+            "Super".into(),
+            "2026-10-01".into(),
+            "super 75k".into(),
+            Some(cash_id.clone()),
+        ).unwrap();
+
+        // Obtener el category_id a través de la categoría creada
+        let cat_rep = get_category_spending_report(db_path.clone(), start_ms, end_ms, "ARS".into()).unwrap();
+        let cat_id = cat_rep.items[0].category_id.clone().unwrap();
+
+        let b_id = set_category_budget(
+            db_path.clone(),
+            cat_id.clone(),
+            "ARS".into(),
+            100_000.0,
+            80,
+        ).unwrap();
+        assert!(!b_id.is_empty());
+
+        let budgets = list_budgets_status(db_path.clone(), start_ms, end_ms, "ARS".into()).unwrap();
+        assert_eq!(budgets.len(), 1);
+        assert_eq!(budgets[0].budget_amount, 100_000.0);
+        assert_eq!(budgets[0].spent_amount, 75_000.0);
+        assert_eq!(budgets[0].remaining_amount, 25_000.0);
+        assert_eq!(budgets[0].spent_percentage, 75.0);
+        assert_eq!(budgets[0].is_warning, false);
+
+        // Metas de ahorro
+        let goal_id = create_saving_goal(
+            db_path.clone(),
+            "Fondo Emergencia".into(),
+            500_000.0,
+            "ARS".into(),
+            None,
+            "#4CAF50".into(),
+            "shield".into(),
+        ).unwrap();
+
+        let goals = list_saving_goals(db_path.clone()).unwrap();
+        assert_eq!(goals.len(), 1);
+        assert_eq!(goals[0].target_amount, 500_000.0);
+        assert_eq!(goals[0].current_amount, 0.0);
+
+        let new_curr = contribute_to_saving_goal(db_path.clone(), goal_id.clone(), 250_000.0).unwrap();
+        assert_eq!(new_curr, 250_000.0);
+
+        let goals_up = list_saving_goals(db_path.clone()).unwrap();
+        assert_eq!(goals_up[0].progress_percentage, 50.0);
+
+        assert!(delete_saving_goal(db_path.clone(), goal_id).unwrap());
+        assert_eq!(list_saving_goals(db_path.clone()).unwrap().len(), 0);
+
+        assert!(delete_budget(db_path.clone(), b_id).unwrap());
+        assert_eq!(list_budgets_status(db_path.clone(), start_ms, end_ms, "ARS".into()).unwrap().len(), 0);
 
         let _ = std::fs::remove_file(&db_path);
     }
