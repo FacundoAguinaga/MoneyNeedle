@@ -8,7 +8,7 @@ import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
 // These functions are ignored because they are not marked as `pub`: `engine`
 // These types are ignored because they are neither used by any `pub` functions nor (for structs and enums) marked `#[frb(unignore)]`: `Engine`
-// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `from`, `from`, `from`, `from`, `from`
+// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `from`, `from`, `from`, `from`, `from`, `from`
 
 /// Pipeline con inferencia mockeada: verifica el cableado sin modelo.
 Future<ProposalDto> proposeMocked(
@@ -310,6 +310,33 @@ Future<bool> deleteSavingGoal(
 Future<List<CategoryDto>> listCategories({required String dbPath}) =>
     RustLib.instance.api.crateApiListCategories(dbPath: dbPath);
 
+/// Exporta las transacciones a formato CSV estándar RFC 4180.
+Future<String> exportTransactionsCsv({required String dbPath}) =>
+    RustLib.instance.api.crateApiExportTransactionsCsv(dbPath: dbPath);
+
+/// Exporta todas las tablas relacionales en un JSON plano legible.
+Future<String> exportAllDataJson({required String dbPath}) =>
+    RustLib.instance.api.crateApiExportAllDataJson(dbPath: dbPath);
+
+/// Exporta movimientos para reentrenamiento de Needle 3 (formato make_dataset.py).
+Future<String> exportCorrectionsForTraining({required String dbPath}) =>
+    RustLib.instance.api.crateApiExportCorrectionsForTraining(dbPath: dbPath);
+
+/// Genera una copia de seguridad cifrada (.mnbackup) con la contraseña o frase provista.
+Future<Uint8List> createEncryptedBackup(
+        {required String dbPath, required String passphrase}) =>
+    RustLib.instance.api
+        .crateApiCreateEncryptedBackup(dbPath: dbPath, passphrase: passphrase);
+
+/// Restaura una copia de seguridad cifrada (.mnbackup) en la base de datos viva.
+/// Realiza un respaldo físico previo en disco antes de aplicar los cambios en una transacción atómica.
+Future<BackupRestoreSummaryDto> restoreEncryptedBackup(
+        {required String dbPath,
+        required List<int> backupBytes,
+        required String passphrase}) =>
+    RustLib.instance.api.crateApiRestoreEncryptedBackup(
+        dbPath: dbPath, backupBytes: backupBytes, passphrase: passphrase);
+
 /// DTO para cuentas y saldos en UI.
 class AccountDto {
   final String id;
@@ -368,6 +395,56 @@ class AccountDto {
           creditLimit == other.creditLimit &&
           closingDay == other.closingDay &&
           dueDay == other.dueDay;
+}
+
+class BackupRestoreSummaryDto {
+  final BigInt accounts;
+  final BigInt categories;
+  final BigInt transactions;
+  final BigInt installments;
+  final BigInt recurringRules;
+  final BigInt exchangeRates;
+  final BigInt budgets;
+  final BigInt savingGoals;
+
+  const BackupRestoreSummaryDto({
+    required this.accounts,
+    required this.categories,
+    required this.transactions,
+    required this.installments,
+    required this.recurringRules,
+    required this.exchangeRates,
+    required this.budgets,
+    required this.savingGoals,
+  });
+
+  static Future<BackupRestoreSummaryDto> default_() =>
+      RustLib.instance.api.crateApiBackupRestoreSummaryDtoDefault();
+
+  @override
+  int get hashCode =>
+      accounts.hashCode ^
+      categories.hashCode ^
+      transactions.hashCode ^
+      installments.hashCode ^
+      recurringRules.hashCode ^
+      exchangeRates.hashCode ^
+      budgets.hashCode ^
+      savingGoals.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is BackupRestoreSummaryDto &&
+          runtimeType == other.runtimeType &&
+          accounts == other.accounts &&
+          categories == other.categories &&
+          transactions == other.transactions &&
+          installments == other.installments &&
+          recurringRules == other.recurringRules &&
+          exchangeRates == other.exchangeRates &&
+          budgets == other.budgets &&
+          savingGoals == other.savingGoals;
 }
 
 class BudgetStatusDto {

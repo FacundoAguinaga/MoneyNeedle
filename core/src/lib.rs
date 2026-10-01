@@ -15,6 +15,7 @@ pub mod api;
 pub mod migrations;
 pub mod store;
 pub mod vault;
+pub mod backup;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum TipoMovimiento {

@@ -1479,6 +1479,10 @@ mod chrono_mock {
     }
 }
 
+pub fn format_epoch_date(epoch_secs: u64) -> String {
+    chrono_mock::NaiveDate::from_timestamp_opt(epoch_secs).format()
+}
+
 // ============================================================================
 // Métricas, Analítica y Reportes (Fase 4)
 // ============================================================================
