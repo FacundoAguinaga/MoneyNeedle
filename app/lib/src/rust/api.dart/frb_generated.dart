@@ -68,7 +68,7 @@ class RustLib extends BaseEntrypoint<RustLibApi, RustLibApiImpl, RustLibWire> {
   String get codegenVersion => '2.13.0';
 
   @override
-  int get rustContentHash => 1038825605;
+  int get rustContentHash => 34194894;
 
   static const kDefaultExternalLibraryLoaderConfig =
       ExternalLibraryLoaderConfig(
@@ -80,6 +80,16 @@ class RustLib extends BaseEntrypoint<RustLibApi, RustLibApiImpl, RustLibWire> {
 }
 
 abstract class RustLibApi extends BaseApi {
+  Future<String> crateApiConfirmCreditPurchase(
+      {required String dbPath,
+      required String cardAccountId,
+      required double monto,
+      required int cuotas,
+      required String categoria,
+      required String descripcion,
+      required int startCycleYear,
+      required int startCycleMonth});
+
   Future<String> crateApiConfirmMovement(
       {required String dbPath,
       required String tipo,
@@ -88,15 +98,56 @@ abstract class RustLibApi extends BaseApi {
       required String categoria,
       required String descripcion,
       required String fecha,
-      required String frase});
+      required String frase,
+      String? accountId});
+
+  Future<String> crateApiCreateAccount(
+      {required String dbPath,
+      required String name,
+      required String accountType,
+      required String currency,
+      required double initialBalance,
+      double? creditLimit,
+      int? closingDay,
+      int? dueDay,
+      required String color,
+      required String icon});
+
+  Future<String> crateApiCreateRecurringRule(
+      {required String dbPath,
+      required String accountId,
+      required String transactionType,
+      required double amount,
+      required String currency,
+      required String frequency,
+      required bool autoApply});
 
   Future<VaultInitDto> crateApiCreateVault({String? customPassphrase});
+
+  Future<bool> crateApiDeleteAccount(
+      {required String dbPath, required String accountId});
+
+  Future<bool> crateApiDeleteRecurringRule(
+      {required String dbPath, required String ruleId});
+
+  Future<CardStatementDto> crateApiGetCardStatement(
+      {required String dbPath,
+      required String cardId,
+      required int cycleYear,
+      required int cycleMonth});
 
   Future<bool> crateApiInitDatabase(
       {required String dbPath, String? rawKeyHex});
 
+  Future<List<AccountDto>> crateApiListAccounts({required String dbPath});
+
   Future<List<MovementDto>> crateApiListMovements(
       {required String dbPath, required PlatformInt64 limit});
+
+  Future<List<RecurringRuleDto>> crateApiListRecurringRules(
+      {required String dbPath});
+
+  Future<int> crateApiProcessRecurringRules({required String dbPath});
 
   Future<ProposalDto> crateApiProposeMocked(
       {required String query, required String fechaHoy});
@@ -119,6 +170,64 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   });
 
   @override
+  Future<String> crateApiConfirmCreditPurchase(
+      {required String dbPath,
+      required String cardAccountId,
+      required double monto,
+      required int cuotas,
+      required String categoria,
+      required String descripcion,
+      required int startCycleYear,
+      required int startCycleMonth}) {
+    return handler.executeNormal(NormalTask(
+      callFfi: (port_) {
+        final serializer = SseSerializer(generalizedFrbRustBinding);
+        sse_encode_String(dbPath, serializer);
+        sse_encode_String(cardAccountId, serializer);
+        sse_encode_f_64(monto, serializer);
+        sse_encode_i_32(cuotas, serializer);
+        sse_encode_String(categoria, serializer);
+        sse_encode_String(descripcion, serializer);
+        sse_encode_i_32(startCycleYear, serializer);
+        sse_encode_i_32(startCycleMonth, serializer);
+        pdeCallFfi(generalizedFrbRustBinding, serializer,
+            funcId: 1, port: port_);
+      },
+      codec: SseCodec(
+        decodeSuccessData: sse_decode_String,
+        decodeErrorData: sse_decode_AnyhowException,
+      ),
+      constMeta: kCrateApiConfirmCreditPurchaseConstMeta,
+      argValues: [
+        dbPath,
+        cardAccountId,
+        monto,
+        cuotas,
+        categoria,
+        descripcion,
+        startCycleYear,
+        startCycleMonth
+      ],
+      apiImpl: this,
+    ));
+  }
+
+  TaskConstMeta get kCrateApiConfirmCreditPurchaseConstMeta =>
+      const TaskConstMeta(
+        debugName: "confirm_credit_purchase",
+        argNames: [
+          "dbPath",
+          "cardAccountId",
+          "monto",
+          "cuotas",
+          "categoria",
+          "descripcion",
+          "startCycleYear",
+          "startCycleMonth"
+        ],
+      );
+
+  @override
   Future<String> crateApiConfirmMovement(
       {required String dbPath,
       required String tipo,
@@ -127,7 +236,8 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       required String categoria,
       required String descripcion,
       required String fecha,
-      required String frase}) {
+      required String frase,
+      String? accountId}) {
     return handler.executeNormal(NormalTask(
       callFfi: (port_) {
         final serializer = SseSerializer(generalizedFrbRustBinding);
@@ -139,8 +249,9 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         sse_encode_String(descripcion, serializer);
         sse_encode_String(fecha, serializer);
         sse_encode_String(frase, serializer);
+        sse_encode_opt_String(accountId, serializer);
         pdeCallFfi(generalizedFrbRustBinding, serializer,
-            funcId: 1, port: port_);
+            funcId: 2, port: port_);
       },
       codec: SseCodec(
         decodeSuccessData: sse_decode_String,
@@ -155,7 +266,8 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         categoria,
         descripcion,
         fecha,
-        frase
+        frase,
+        accountId
       ],
       apiImpl: this,
     ));
@@ -171,7 +283,127 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           "categoria",
           "descripcion",
           "fecha",
-          "frase"
+          "frase",
+          "accountId"
+        ],
+      );
+
+  @override
+  Future<String> crateApiCreateAccount(
+      {required String dbPath,
+      required String name,
+      required String accountType,
+      required String currency,
+      required double initialBalance,
+      double? creditLimit,
+      int? closingDay,
+      int? dueDay,
+      required String color,
+      required String icon}) {
+    return handler.executeNormal(NormalTask(
+      callFfi: (port_) {
+        final serializer = SseSerializer(generalizedFrbRustBinding);
+        sse_encode_String(dbPath, serializer);
+        sse_encode_String(name, serializer);
+        sse_encode_String(accountType, serializer);
+        sse_encode_String(currency, serializer);
+        sse_encode_f_64(initialBalance, serializer);
+        sse_encode_opt_box_autoadd_f_64(creditLimit, serializer);
+        sse_encode_opt_box_autoadd_i_32(closingDay, serializer);
+        sse_encode_opt_box_autoadd_i_32(dueDay, serializer);
+        sse_encode_String(color, serializer);
+        sse_encode_String(icon, serializer);
+        pdeCallFfi(generalizedFrbRustBinding, serializer,
+            funcId: 3, port: port_);
+      },
+      codec: SseCodec(
+        decodeSuccessData: sse_decode_String,
+        decodeErrorData: sse_decode_AnyhowException,
+      ),
+      constMeta: kCrateApiCreateAccountConstMeta,
+      argValues: [
+        dbPath,
+        name,
+        accountType,
+        currency,
+        initialBalance,
+        creditLimit,
+        closingDay,
+        dueDay,
+        color,
+        icon
+      ],
+      apiImpl: this,
+    ));
+  }
+
+  TaskConstMeta get kCrateApiCreateAccountConstMeta => const TaskConstMeta(
+        debugName: "create_account",
+        argNames: [
+          "dbPath",
+          "name",
+          "accountType",
+          "currency",
+          "initialBalance",
+          "creditLimit",
+          "closingDay",
+          "dueDay",
+          "color",
+          "icon"
+        ],
+      );
+
+  @override
+  Future<String> crateApiCreateRecurringRule(
+      {required String dbPath,
+      required String accountId,
+      required String transactionType,
+      required double amount,
+      required String currency,
+      required String frequency,
+      required bool autoApply}) {
+    return handler.executeNormal(NormalTask(
+      callFfi: (port_) {
+        final serializer = SseSerializer(generalizedFrbRustBinding);
+        sse_encode_String(dbPath, serializer);
+        sse_encode_String(accountId, serializer);
+        sse_encode_String(transactionType, serializer);
+        sse_encode_f_64(amount, serializer);
+        sse_encode_String(currency, serializer);
+        sse_encode_String(frequency, serializer);
+        sse_encode_bool(autoApply, serializer);
+        pdeCallFfi(generalizedFrbRustBinding, serializer,
+            funcId: 4, port: port_);
+      },
+      codec: SseCodec(
+        decodeSuccessData: sse_decode_String,
+        decodeErrorData: sse_decode_AnyhowException,
+      ),
+      constMeta: kCrateApiCreateRecurringRuleConstMeta,
+      argValues: [
+        dbPath,
+        accountId,
+        transactionType,
+        amount,
+        currency,
+        frequency,
+        autoApply
+      ],
+      apiImpl: this,
+    ));
+  }
+
+  TaskConstMeta get kCrateApiCreateRecurringRuleConstMeta =>
+      const TaskConstMeta(
+        debugName: "create_recurring_rule",
+        argNames: [
+          "dbPath",
+          "accountId",
+          "transactionType",
+          "amount",
+          "currency",
+          "frequency",
+          "autoApply"
         ],
       );
 
@@ -182,7 +414,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         final serializer = SseSerializer(generalizedFrbRustBinding);
         sse_encode_opt_String(customPassphrase, serializer);
         pdeCallFfi(generalizedFrbRustBinding, serializer,
-            funcId: 2, port: port_);
+            funcId: 5, port: port_);
       },
       codec: SseCodec(
         decodeSuccessData: sse_decode_vault_init_dto,
@@ -200,6 +432,90 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       );
 
   @override
+  Future<bool> crateApiDeleteAccount(
+      {required String dbPath, required String accountId}) {
+    return handler.executeNormal(NormalTask(
+      callFfi: (port_) {
+        final serializer = SseSerializer(generalizedFrbRustBinding);
+        sse_encode_String(dbPath, serializer);
+        sse_encode_String(accountId, serializer);
+        pdeCallFfi(generalizedFrbRustBinding, serializer,
+            funcId: 6, port: port_);
+      },
+      codec: SseCodec(
+        decodeSuccessData: sse_decode_bool,
+        decodeErrorData: sse_decode_AnyhowException,
+      ),
+      constMeta: kCrateApiDeleteAccountConstMeta,
+      argValues: [dbPath, accountId],
+      apiImpl: this,
+    ));
+  }
+
+  TaskConstMeta get kCrateApiDeleteAccountConstMeta => const TaskConstMeta(
+        debugName: "delete_account",
+        argNames: ["dbPath", "accountId"],
+      );
+
+  @override
+  Future<bool> crateApiDeleteRecurringRule(
+      {required String dbPath, required String ruleId}) {
+    return handler.executeNormal(NormalTask(
+      callFfi: (port_) {
+        final serializer = SseSerializer(generalizedFrbRustBinding);
+        sse_encode_String(dbPath, serializer);
+        sse_encode_String(ruleId, serializer);
+        pdeCallFfi(generalizedFrbRustBinding, serializer,
+            funcId: 7, port: port_);
+      },
+      codec: SseCodec(
+        decodeSuccessData: sse_decode_bool,
+        decodeErrorData: sse_decode_AnyhowException,
+      ),
+      constMeta: kCrateApiDeleteRecurringRuleConstMeta,
+      argValues: [dbPath, ruleId],
+      apiImpl: this,
+    ));
+  }
+
+  TaskConstMeta get kCrateApiDeleteRecurringRuleConstMeta =>
+      const TaskConstMeta(
+        debugName: "delete_recurring_rule",
+        argNames: ["dbPath", "ruleId"],
+      );
+
+  @override
+  Future<CardStatementDto> crateApiGetCardStatement(
+      {required String dbPath,
+      required String cardId,
+      required int cycleYear,
+      required int cycleMonth}) {
+    return handler.executeNormal(NormalTask(
+      callFfi: (port_) {
+        final serializer = SseSerializer(generalizedFrbRustBinding);
+        sse_encode_String(dbPath, serializer);
+        sse_encode_String(cardId, serializer);
+        sse_encode_i_32(cycleYear, serializer);
+        sse_encode_i_32(cycleMonth, serializer);
+        pdeCallFfi(generalizedFrbRustBinding, serializer,
+            funcId: 8, port: port_);
+      },
+      codec: SseCodec(
+        decodeSuccessData: sse_decode_card_statement_dto,
+        decodeErrorData: sse_decode_AnyhowException,
+      ),
+      constMeta: kCrateApiGetCardStatementConstMeta,
+      argValues: [dbPath, cardId, cycleYear, cycleMonth],
+      apiImpl: this,
+    ));
+  }
+
+  TaskConstMeta get kCrateApiGetCardStatementConstMeta => const TaskConstMeta(
+        debugName: "get_card_statement",
+        argNames: ["dbPath", "cardId", "cycleYear", "cycleMonth"],
+      );
+
+  @override
   Future<bool> crateApiInitDatabase(
       {required String dbPath, String? rawKeyHex}) {
     return handler.executeNormal(NormalTask(
@@ -208,7 +524,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         sse_encode_String(dbPath, serializer);
         sse_encode_opt_String(rawKeyHex, serializer);
         pdeCallFfi(generalizedFrbRustBinding, serializer,
-            funcId: 3, port: port_);
+            funcId: 9, port: port_);
       },
       codec: SseCodec(
         decodeSuccessData: sse_decode_bool,
@@ -226,6 +542,30 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       );
 
   @override
+  Future<List<AccountDto>> crateApiListAccounts({required String dbPath}) {
+    return handler.executeNormal(NormalTask(
+      callFfi: (port_) {
+        final serializer = SseSerializer(generalizedFrbRustBinding);
+        sse_encode_String(dbPath, serializer);
+        pdeCallFfi(generalizedFrbRustBinding, serializer,
+            funcId: 10, port: port_);
+      },
+      codec: SseCodec(
+        decodeSuccessData: sse_decode_list_account_dto,
+        decodeErrorData: sse_decode_AnyhowException,
+      ),
+      constMeta: kCrateApiListAccountsConstMeta,
+      argValues: [dbPath],
+      apiImpl: this,
+    ));
+  }
+
+  TaskConstMeta get kCrateApiListAccountsConstMeta => const TaskConstMeta(
+        debugName: "list_accounts",
+        argNames: ["dbPath"],
+      );
+
+  @override
   Future<List<MovementDto>> crateApiListMovements(
       {required String dbPath, required PlatformInt64 limit}) {
     return handler.executeNormal(NormalTask(
@@ -234,7 +574,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         sse_encode_String(dbPath, serializer);
         sse_encode_i_64(limit, serializer);
         pdeCallFfi(generalizedFrbRustBinding, serializer,
-            funcId: 4, port: port_);
+            funcId: 11, port: port_);
       },
       codec: SseCodec(
         decodeSuccessData: sse_decode_list_movement_dto,
@@ -252,6 +592,56 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       );
 
   @override
+  Future<List<RecurringRuleDto>> crateApiListRecurringRules(
+      {required String dbPath}) {
+    return handler.executeNormal(NormalTask(
+      callFfi: (port_) {
+        final serializer = SseSerializer(generalizedFrbRustBinding);
+        sse_encode_String(dbPath, serializer);
+        pdeCallFfi(generalizedFrbRustBinding, serializer,
+            funcId: 12, port: port_);
+      },
+      codec: SseCodec(
+        decodeSuccessData: sse_decode_list_recurring_rule_dto,
+        decodeErrorData: sse_decode_AnyhowException,
+      ),
+      constMeta: kCrateApiListRecurringRulesConstMeta,
+      argValues: [dbPath],
+      apiImpl: this,
+    ));
+  }
+
+  TaskConstMeta get kCrateApiListRecurringRulesConstMeta => const TaskConstMeta(
+        debugName: "list_recurring_rules",
+        argNames: ["dbPath"],
+      );
+
+  @override
+  Future<int> crateApiProcessRecurringRules({required String dbPath}) {
+    return handler.executeNormal(NormalTask(
+      callFfi: (port_) {
+        final serializer = SseSerializer(generalizedFrbRustBinding);
+        sse_encode_String(dbPath, serializer);
+        pdeCallFfi(generalizedFrbRustBinding, serializer,
+            funcId: 13, port: port_);
+      },
+      codec: SseCodec(
+        decodeSuccessData: sse_decode_i_32,
+        decodeErrorData: sse_decode_AnyhowException,
+      ),
+      constMeta: kCrateApiProcessRecurringRulesConstMeta,
+      argValues: [dbPath],
+      apiImpl: this,
+    ));
+  }
+
+  TaskConstMeta get kCrateApiProcessRecurringRulesConstMeta =>
+      const TaskConstMeta(
+        debugName: "process_recurring_rules",
+        argNames: ["dbPath"],
+      );
+
+  @override
   Future<ProposalDto> crateApiProposeMocked(
       {required String query, required String fechaHoy}) {
     return handler.executeNormal(NormalTask(
@@ -260,7 +650,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         sse_encode_String(query, serializer);
         sse_encode_String(fechaHoy, serializer);
         pdeCallFfi(generalizedFrbRustBinding, serializer,
-            funcId: 5, port: port_);
+            funcId: 14, port: port_);
       },
       codec: SseCodec(
         decodeSuccessData: sse_decode_proposal_dto,
@@ -289,7 +679,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         sse_encode_String(fechaHoy, serializer);
         sse_encode_String(cactPath, serializer);
         pdeCallFfi(generalizedFrbRustBinding, serializer,
-            funcId: 6, port: port_);
+            funcId: 15, port: port_);
       },
       codec: SseCodec(
         decodeSuccessData: sse_decode_proposal_dto,
@@ -316,7 +706,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         sse_encode_String(wrappedRecoveryPayload, serializer);
         sse_encode_String(recoveryPhrase, serializer);
         pdeCallFfi(generalizedFrbRustBinding, serializer,
-            funcId: 7, port: port_);
+            funcId: 16, port: port_);
       },
       codec: SseCodec(
         decodeSuccessData: sse_decode_String,
@@ -346,9 +736,74 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  AccountDto dco_decode_account_dto(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 11)
+      throw Exception('unexpected arr length: expect 11 but see ${arr.length}');
+    return AccountDto(
+      id: dco_decode_String(arr[0]),
+      name: dco_decode_String(arr[1]),
+      accountType: dco_decode_String(arr[2]),
+      currency: dco_decode_String(arr[3]),
+      initialBalance: dco_decode_f_64(arr[4]),
+      currentBalance: dco_decode_f_64(arr[5]),
+      color: dco_decode_String(arr[6]),
+      icon: dco_decode_String(arr[7]),
+      creditLimit: dco_decode_opt_box_autoadd_f_64(arr[8]),
+      closingDay: dco_decode_opt_box_autoadd_i_32(arr[9]),
+      dueDay: dco_decode_opt_box_autoadd_i_32(arr[10]),
+    );
+  }
+
+  @protected
   bool dco_decode_bool(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return raw as bool;
+  }
+
+  @protected
+  double dco_decode_box_autoadd_f_64(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw as double;
+  }
+
+  @protected
+  int dco_decode_box_autoadd_i_32(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw as int;
+  }
+
+  @protected
+  CardStatementDto dco_decode_card_statement_dto(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 5)
+      throw Exception('unexpected arr length: expect 5 but see ${arr.length}');
+    return CardStatementDto(
+      cardId: dco_decode_String(arr[0]),
+      cycleYear: dco_decode_i_32(arr[1]),
+      cycleMonth: dco_decode_i_32(arr[2]),
+      totalDue: dco_decode_f_64(arr[3]),
+      items: dco_decode_list_card_statement_item_dto(arr[4]),
+    );
+  }
+
+  @protected
+  CardStatementItemDto dco_decode_card_statement_item_dto(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 7)
+      throw Exception('unexpected arr length: expect 7 but see ${arr.length}');
+    return CardStatementItemDto(
+      installmentId: dco_decode_String(arr[0]),
+      transactionId: dco_decode_String(arr[1]),
+      installmentNumber: dco_decode_i_32(arr[2]),
+      totalInstallments: dco_decode_i_32(arr[3]),
+      amount: dco_decode_f_64(arr[4]),
+      description: dco_decode_String(arr[5]),
+      status: dco_decode_String(arr[6]),
+    );
   }
 
   @protected
@@ -358,9 +813,30 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  int dco_decode_i_32(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw as int;
+  }
+
+  @protected
   PlatformInt64 dco_decode_i_64(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return dcoDecodeI64(raw);
+  }
+
+  @protected
+  List<AccountDto> dco_decode_list_account_dto(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return (raw as List<dynamic>).map(dco_decode_account_dto).toList();
+  }
+
+  @protected
+  List<CardStatementItemDto> dco_decode_list_card_statement_item_dto(
+      dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return (raw as List<dynamic>)
+        .map(dco_decode_card_statement_item_dto)
+        .toList();
   }
 
   @protected
@@ -373,6 +849,12 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   Uint8List dco_decode_list_prim_u_8_strict(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return raw as Uint8List;
+  }
+
+  @protected
+  List<RecurringRuleDto> dco_decode_list_recurring_rule_dto(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return (raw as List<dynamic>).map(dco_decode_recurring_rule_dto).toList();
   }
 
   @protected
@@ -399,6 +881,18 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  double? dco_decode_opt_box_autoadd_f_64(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw == null ? null : dco_decode_box_autoadd_f_64(raw);
+  }
+
+  @protected
+  int? dco_decode_opt_box_autoadd_i_32(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw == null ? null : dco_decode_box_autoadd_i_32(raw);
+  }
+
+  @protected
   ProposalDto dco_decode_proposal_dto(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
@@ -411,6 +905,25 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       moneda: dco_decode_String(arr[3]),
       fecha: dco_decode_String(arr[4]),
       grounded: dco_decode_bool(arr[5]),
+    );
+  }
+
+  @protected
+  RecurringRuleDto dco_decode_recurring_rule_dto(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 9)
+      throw Exception('unexpected arr length: expect 9 but see ${arr.length}');
+    return RecurringRuleDto(
+      id: dco_decode_String(arr[0]),
+      accountId: dco_decode_String(arr[1]),
+      accountName: dco_decode_String(arr[2]),
+      transactionType: dco_decode_String(arr[3]),
+      amount: dco_decode_f_64(arr[4]),
+      currency: dco_decode_String(arr[5]),
+      frequency: dco_decode_String(arr[6]),
+      startDate: dco_decode_i_64(arr[7]),
+      autoApply: dco_decode_bool(arr[8]),
     );
   }
 
@@ -454,9 +967,86 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  AccountDto sse_decode_account_dto(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_id = sse_decode_String(deserializer);
+    var var_name = sse_decode_String(deserializer);
+    var var_accountType = sse_decode_String(deserializer);
+    var var_currency = sse_decode_String(deserializer);
+    var var_initialBalance = sse_decode_f_64(deserializer);
+    var var_currentBalance = sse_decode_f_64(deserializer);
+    var var_color = sse_decode_String(deserializer);
+    var var_icon = sse_decode_String(deserializer);
+    var var_creditLimit = sse_decode_opt_box_autoadd_f_64(deserializer);
+    var var_closingDay = sse_decode_opt_box_autoadd_i_32(deserializer);
+    var var_dueDay = sse_decode_opt_box_autoadd_i_32(deserializer);
+    return AccountDto(
+        id: var_id,
+        name: var_name,
+        accountType: var_accountType,
+        currency: var_currency,
+        initialBalance: var_initialBalance,
+        currentBalance: var_currentBalance,
+        color: var_color,
+        icon: var_icon,
+        creditLimit: var_creditLimit,
+        closingDay: var_closingDay,
+        dueDay: var_dueDay);
+  }
+
+  @protected
   bool sse_decode_bool(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     return deserializer.buffer.getUint8() != 0;
+  }
+
+  @protected
+  double sse_decode_box_autoadd_f_64(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return (sse_decode_f_64(deserializer));
+  }
+
+  @protected
+  int sse_decode_box_autoadd_i_32(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return (sse_decode_i_32(deserializer));
+  }
+
+  @protected
+  CardStatementDto sse_decode_card_statement_dto(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_cardId = sse_decode_String(deserializer);
+    var var_cycleYear = sse_decode_i_32(deserializer);
+    var var_cycleMonth = sse_decode_i_32(deserializer);
+    var var_totalDue = sse_decode_f_64(deserializer);
+    var var_items = sse_decode_list_card_statement_item_dto(deserializer);
+    return CardStatementDto(
+        cardId: var_cardId,
+        cycleYear: var_cycleYear,
+        cycleMonth: var_cycleMonth,
+        totalDue: var_totalDue,
+        items: var_items);
+  }
+
+  @protected
+  CardStatementItemDto sse_decode_card_statement_item_dto(
+      SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_installmentId = sse_decode_String(deserializer);
+    var var_transactionId = sse_decode_String(deserializer);
+    var var_installmentNumber = sse_decode_i_32(deserializer);
+    var var_totalInstallments = sse_decode_i_32(deserializer);
+    var var_amount = sse_decode_f_64(deserializer);
+    var var_description = sse_decode_String(deserializer);
+    var var_status = sse_decode_String(deserializer);
+    return CardStatementItemDto(
+        installmentId: var_installmentId,
+        transactionId: var_transactionId,
+        installmentNumber: var_installmentNumber,
+        totalInstallments: var_totalInstallments,
+        amount: var_amount,
+        description: var_description,
+        status: var_status);
   }
 
   @protected
@@ -466,9 +1056,40 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  int sse_decode_i_32(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return deserializer.buffer.getInt32();
+  }
+
+  @protected
   PlatformInt64 sse_decode_i_64(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     return deserializer.buffer.getPlatformInt64();
+  }
+
+  @protected
+  List<AccountDto> sse_decode_list_account_dto(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var len_ = sse_decode_i_32(deserializer);
+    var ans_ = <AccountDto>[];
+    for (var idx_ = 0; idx_ < len_; ++idx_) {
+      ans_.add(sse_decode_account_dto(deserializer));
+    }
+    return ans_;
+  }
+
+  @protected
+  List<CardStatementItemDto> sse_decode_list_card_statement_item_dto(
+      SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var len_ = sse_decode_i_32(deserializer);
+    var ans_ = <CardStatementItemDto>[];
+    for (var idx_ = 0; idx_ < len_; ++idx_) {
+      ans_.add(sse_decode_card_statement_item_dto(deserializer));
+    }
+    return ans_;
   }
 
   @protected
@@ -488,6 +1109,19 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     // Codec=Sse (Serialization based), see doc to use other codecs
     var len_ = sse_decode_i_32(deserializer);
     return deserializer.buffer.getUint8List(len_);
+  }
+
+  @protected
+  List<RecurringRuleDto> sse_decode_list_recurring_rule_dto(
+      SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var len_ = sse_decode_i_32(deserializer);
+    var ans_ = <RecurringRuleDto>[];
+    for (var idx_ = 0; idx_ < len_; ++idx_) {
+      ans_.add(sse_decode_recurring_rule_dto(deserializer));
+    }
+    return ans_;
   }
 
   @protected
@@ -522,6 +1156,28 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  double? sse_decode_opt_box_autoadd_f_64(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    if (sse_decode_bool(deserializer)) {
+      return (sse_decode_box_autoadd_f_64(deserializer));
+    } else {
+      return null;
+    }
+  }
+
+  @protected
+  int? sse_decode_opt_box_autoadd_i_32(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    if (sse_decode_bool(deserializer)) {
+      return (sse_decode_box_autoadd_i_32(deserializer));
+    } else {
+      return null;
+    }
+  }
+
+  @protected
   ProposalDto sse_decode_proposal_dto(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     var var_tipo = sse_decode_String(deserializer);
@@ -537,6 +1193,30 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         moneda: var_moneda,
         fecha: var_fecha,
         grounded: var_grounded);
+  }
+
+  @protected
+  RecurringRuleDto sse_decode_recurring_rule_dto(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_id = sse_decode_String(deserializer);
+    var var_accountId = sse_decode_String(deserializer);
+    var var_accountName = sse_decode_String(deserializer);
+    var var_transactionType = sse_decode_String(deserializer);
+    var var_amount = sse_decode_f_64(deserializer);
+    var var_currency = sse_decode_String(deserializer);
+    var var_frequency = sse_decode_String(deserializer);
+    var var_startDate = sse_decode_i_64(deserializer);
+    var var_autoApply = sse_decode_bool(deserializer);
+    return RecurringRuleDto(
+        id: var_id,
+        accountId: var_accountId,
+        accountName: var_accountName,
+        transactionType: var_transactionType,
+        amount: var_amount,
+        currency: var_currency,
+        frequency: var_frequency,
+        startDate: var_startDate,
+        autoApply: var_autoApply);
   }
 
   @protected
@@ -563,12 +1243,6 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
-  int sse_decode_i_32(SseDeserializer deserializer) {
-    // Codec=Sse (Serialization based), see doc to use other codecs
-    return deserializer.buffer.getInt32();
-  }
-
-  @protected
   void sse_encode_AnyhowException(
       AnyhowException self, SseSerializer serializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
@@ -582,9 +1256,61 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  void sse_encode_account_dto(AccountDto self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.id, serializer);
+    sse_encode_String(self.name, serializer);
+    sse_encode_String(self.accountType, serializer);
+    sse_encode_String(self.currency, serializer);
+    sse_encode_f_64(self.initialBalance, serializer);
+    sse_encode_f_64(self.currentBalance, serializer);
+    sse_encode_String(self.color, serializer);
+    sse_encode_String(self.icon, serializer);
+    sse_encode_opt_box_autoadd_f_64(self.creditLimit, serializer);
+    sse_encode_opt_box_autoadd_i_32(self.closingDay, serializer);
+    sse_encode_opt_box_autoadd_i_32(self.dueDay, serializer);
+  }
+
+  @protected
   void sse_encode_bool(bool self, SseSerializer serializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     serializer.buffer.putUint8(self ? 1 : 0);
+  }
+
+  @protected
+  void sse_encode_box_autoadd_f_64(double self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_f_64(self, serializer);
+  }
+
+  @protected
+  void sse_encode_box_autoadd_i_32(int self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self, serializer);
+  }
+
+  @protected
+  void sse_encode_card_statement_dto(
+      CardStatementDto self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.cardId, serializer);
+    sse_encode_i_32(self.cycleYear, serializer);
+    sse_encode_i_32(self.cycleMonth, serializer);
+    sse_encode_f_64(self.totalDue, serializer);
+    sse_encode_list_card_statement_item_dto(self.items, serializer);
+  }
+
+  @protected
+  void sse_encode_card_statement_item_dto(
+      CardStatementItemDto self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.installmentId, serializer);
+    sse_encode_String(self.transactionId, serializer);
+    sse_encode_i_32(self.installmentNumber, serializer);
+    sse_encode_i_32(self.totalInstallments, serializer);
+    sse_encode_f_64(self.amount, serializer);
+    sse_encode_String(self.description, serializer);
+    sse_encode_String(self.status, serializer);
   }
 
   @protected
@@ -594,9 +1320,35 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  void sse_encode_i_32(int self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    serializer.buffer.putInt32(self);
+  }
+
+  @protected
   void sse_encode_i_64(PlatformInt64 self, SseSerializer serializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     serializer.buffer.putPlatformInt64(self);
+  }
+
+  @protected
+  void sse_encode_list_account_dto(
+      List<AccountDto> self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    for (final item in self) {
+      sse_encode_account_dto(item, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_list_card_statement_item_dto(
+      List<CardStatementItemDto> self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    for (final item in self) {
+      sse_encode_card_statement_item_dto(item, serializer);
+    }
   }
 
   @protected
@@ -615,6 +1367,16 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_i_32(self.length, serializer);
     serializer.buffer.putUint8List(self);
+  }
+
+  @protected
+  void sse_encode_list_recurring_rule_dto(
+      List<RecurringRuleDto> self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    for (final item in self) {
+      sse_encode_recurring_rule_dto(item, serializer);
+    }
   }
 
   @protected
@@ -640,6 +1402,26 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  void sse_encode_opt_box_autoadd_f_64(double? self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    sse_encode_bool(self != null, serializer);
+    if (self != null) {
+      sse_encode_box_autoadd_f_64(self, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_opt_box_autoadd_i_32(int? self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    sse_encode_bool(self != null, serializer);
+    if (self != null) {
+      sse_encode_box_autoadd_i_32(self, serializer);
+    }
+  }
+
+  @protected
   void sse_encode_proposal_dto(ProposalDto self, SseSerializer serializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_String(self.tipo, serializer);
@@ -648,6 +1430,21 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     sse_encode_String(self.moneda, serializer);
     sse_encode_String(self.fecha, serializer);
     sse_encode_bool(self.grounded, serializer);
+  }
+
+  @protected
+  void sse_encode_recurring_rule_dto(
+      RecurringRuleDto self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.id, serializer);
+    sse_encode_String(self.accountId, serializer);
+    sse_encode_String(self.accountName, serializer);
+    sse_encode_String(self.transactionType, serializer);
+    sse_encode_f_64(self.amount, serializer);
+    sse_encode_String(self.currency, serializer);
+    sse_encode_String(self.frequency, serializer);
+    sse_encode_i_64(self.startDate, serializer);
+    sse_encode_bool(self.autoApply, serializer);
   }
 
   @protected
@@ -667,11 +1464,5 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     sse_encode_String(self.rawMasterKeyHex, serializer);
     sse_encode_String(self.recoveryPhrase, serializer);
     sse_encode_String(self.wrappedRecoveryPayload, serializer);
-  }
-
-  @protected
-  void sse_encode_i_32(int self, SseSerializer serializer) {
-    // Codec=Sse (Serialization based), see doc to use other codecs
-    serializer.buffer.putInt32(self);
   }
 }

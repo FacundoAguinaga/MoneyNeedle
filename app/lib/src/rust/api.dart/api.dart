@@ -8,7 +8,7 @@ import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
 // These functions are ignored because they are not marked as `pub`: `engine`
 // These types are ignored because they are neither used by any `pub` functions nor (for structs and enums) marked `#[frb(unignore)]`: `Engine`
-// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `clone`, `clone`, `clone`, `fmt`, `fmt`, `fmt`, `from`, `from`, `from`
+// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `from`, `from`, `from`, `from`
 
 /// Pipeline con inferencia mockeada: verifica el cableado sin modelo.
 Future<ProposalDto> proposeMocked(
@@ -38,7 +38,8 @@ Future<String> confirmMovement(
         required String categoria,
         required String descripcion,
         required String fecha,
-        required String frase}) =>
+        required String frase,
+        String? accountId}) =>
     RustLib.instance.api.crateApiConfirmMovement(
         dbPath: dbPath,
         tipo: tipo,
@@ -47,7 +48,106 @@ Future<String> confirmMovement(
         categoria: categoria,
         descripcion: descripcion,
         fecha: fecha,
-        frase: frase);
+        frase: frase,
+        accountId: accountId);
+
+/// Inserta una compra con tarjeta de crédito en N cuotas.
+Future<String> confirmCreditPurchase(
+        {required String dbPath,
+        required String cardAccountId,
+        required double monto,
+        required int cuotas,
+        required String categoria,
+        required String descripcion,
+        required int startCycleYear,
+        required int startCycleMonth}) =>
+    RustLib.instance.api.crateApiConfirmCreditPurchase(
+        dbPath: dbPath,
+        cardAccountId: cardAccountId,
+        monto: monto,
+        cuotas: cuotas,
+        categoria: categoria,
+        descripcion: descripcion,
+        startCycleYear: startCycleYear,
+        startCycleMonth: startCycleMonth);
+
+/// Lista todas las cuentas activas con su saldo calculado.
+Future<List<AccountDto>> listAccounts({required String dbPath}) =>
+    RustLib.instance.api.crateApiListAccounts(dbPath: dbPath);
+
+/// Crea una nueva cuenta financiera.
+Future<String> createAccount(
+        {required String dbPath,
+        required String name,
+        required String accountType,
+        required String currency,
+        required double initialBalance,
+        double? creditLimit,
+        int? closingDay,
+        int? dueDay,
+        required String color,
+        required String icon}) =>
+    RustLib.instance.api.crateApiCreateAccount(
+        dbPath: dbPath,
+        name: name,
+        accountType: accountType,
+        currency: currency,
+        initialBalance: initialBalance,
+        creditLimit: creditLimit,
+        closingDay: closingDay,
+        dueDay: dueDay,
+        color: color,
+        icon: icon);
+
+/// Elimina (soft-delete) una cuenta.
+Future<bool> deleteAccount(
+        {required String dbPath, required String accountId}) =>
+    RustLib.instance.api
+        .crateApiDeleteAccount(dbPath: dbPath, accountId: accountId);
+
+/// Obtiene el resumen de tarjeta para un ciclo determinado.
+Future<CardStatementDto> getCardStatement(
+        {required String dbPath,
+        required String cardId,
+        required int cycleYear,
+        required int cycleMonth}) =>
+    RustLib.instance.api.crateApiGetCardStatement(
+        dbPath: dbPath,
+        cardId: cardId,
+        cycleYear: cycleYear,
+        cycleMonth: cycleMonth);
+
+/// Lista todas las reglas recurrentes activas.
+Future<List<RecurringRuleDto>> listRecurringRules({required String dbPath}) =>
+    RustLib.instance.api.crateApiListRecurringRules(dbPath: dbPath);
+
+/// Crea una nueva suscripción o regla recurrente.
+Future<String> createRecurringRule(
+        {required String dbPath,
+        required String accountId,
+        required String transactionType,
+        required double amount,
+        required String currency,
+        required String frequency,
+        required bool autoApply}) =>
+    RustLib.instance.api.crateApiCreateRecurringRule(
+        dbPath: dbPath,
+        accountId: accountId,
+        transactionType: transactionType,
+        amount: amount,
+        currency: currency,
+        frequency: frequency,
+        autoApply: autoApply);
+
+/// Elimina una regla recurrente.
+Future<bool> deleteRecurringRule(
+        {required String dbPath, required String ruleId}) =>
+    RustLib.instance.api
+        .crateApiDeleteRecurringRule(dbPath: dbPath, ruleId: ruleId);
+
+/// Procesa las reglas recurrentes vencidas hasta hoy.
+Future<int> processRecurringRules({required String dbPath}) =>
+    RustLib.instance.api.crateApiProcessRecurringRules(dbPath: dbPath);
 
 /// Genera una nueva Master Key aleatoria y la envuelve con 12 palabras BIP-39.
 Future<VaultInitDto> createVault({String? customPassphrase}) =>
@@ -66,6 +166,146 @@ Future<String> recoverMasterKey(
 Future<List<MovementDto>> listMovements(
         {required String dbPath, required PlatformInt64 limit}) =>
     RustLib.instance.api.crateApiListMovements(dbPath: dbPath, limit: limit);
+
+/// DTO para cuentas y saldos en UI.
+class AccountDto {
+  final String id;
+  final String name;
+  final String accountType;
+  final String currency;
+  final double initialBalance;
+  final double currentBalance;
+  final String color;
+  final String icon;
+  final double? creditLimit;
+  final int? closingDay;
+  final int? dueDay;
+
+  const AccountDto({
+    required this.id,
+    required this.name,
+    required this.accountType,
+    required this.currency,
+    required this.initialBalance,
+    required this.currentBalance,
+    required this.color,
+    required this.icon,
+    this.creditLimit,
+    this.closingDay,
+    this.dueDay,
+  });
+
+  @override
+  int get hashCode =>
+      id.hashCode ^
+      name.hashCode ^
+      accountType.hashCode ^
+      currency.hashCode ^
+      initialBalance.hashCode ^
+      currentBalance.hashCode ^
+      color.hashCode ^
+      icon.hashCode ^
+      creditLimit.hashCode ^
+      closingDay.hashCode ^
+      dueDay.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is AccountDto &&
+          runtimeType == other.runtimeType &&
+          id == other.id &&
+          name == other.name &&
+          accountType == other.accountType &&
+          currency == other.currency &&
+          initialBalance == other.initialBalance &&
+          currentBalance == other.currentBalance &&
+          color == other.color &&
+          icon == other.icon &&
+          creditLimit == other.creditLimit &&
+          closingDay == other.closingDay &&
+          dueDay == other.dueDay;
+}
+
+/// Resumen de tarjeta para un ciclo mensual.
+class CardStatementDto {
+  final String cardId;
+  final int cycleYear;
+  final int cycleMonth;
+  final double totalDue;
+  final List<CardStatementItemDto> items;
+
+  const CardStatementDto({
+    required this.cardId,
+    required this.cycleYear,
+    required this.cycleMonth,
+    required this.totalDue,
+    required this.items,
+  });
+
+  @override
+  int get hashCode =>
+      cardId.hashCode ^
+      cycleYear.hashCode ^
+      cycleMonth.hashCode ^
+      totalDue.hashCode ^
+      items.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is CardStatementDto &&
+          runtimeType == other.runtimeType &&
+          cardId == other.cardId &&
+          cycleYear == other.cycleYear &&
+          cycleMonth == other.cycleMonth &&
+          totalDue == other.totalDue &&
+          items == other.items;
+}
+
+/// Cuota de resumen de tarjeta.
+class CardStatementItemDto {
+  final String installmentId;
+  final String transactionId;
+  final int installmentNumber;
+  final int totalInstallments;
+  final double amount;
+  final String description;
+  final String status;
+
+  const CardStatementItemDto({
+    required this.installmentId,
+    required this.transactionId,
+    required this.installmentNumber,
+    required this.totalInstallments,
+    required this.amount,
+    required this.description,
+    required this.status,
+  });
+
+  @override
+  int get hashCode =>
+      installmentId.hashCode ^
+      transactionId.hashCode ^
+      installmentNumber.hashCode ^
+      totalInstallments.hashCode ^
+      amount.hashCode ^
+      description.hashCode ^
+      status.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is CardStatementItemDto &&
+          runtimeType == other.runtimeType &&
+          installmentId == other.installmentId &&
+          transactionId == other.transactionId &&
+          installmentNumber == other.installmentNumber &&
+          totalInstallments == other.totalInstallments &&
+          amount == other.amount &&
+          description == other.description &&
+          status == other.status;
+}
 
 /// Movimiento guardado, listo para la lista de la UI.
 class MovementDto {
@@ -149,6 +389,58 @@ class ProposalDto {
           moneda == other.moneda &&
           fecha == other.fecha &&
           grounded == other.grounded;
+}
+
+/// Vista DTO de una suscripción o regla recurrente.
+class RecurringRuleDto {
+  final String id;
+  final String accountId;
+  final String accountName;
+  final String transactionType;
+  final double amount;
+  final String currency;
+  final String frequency;
+  final PlatformInt64 startDate;
+  final bool autoApply;
+
+  const RecurringRuleDto({
+    required this.id,
+    required this.accountId,
+    required this.accountName,
+    required this.transactionType,
+    required this.amount,
+    required this.currency,
+    required this.frequency,
+    required this.startDate,
+    required this.autoApply,
+  });
+
+  @override
+  int get hashCode =>
+      id.hashCode ^
+      accountId.hashCode ^
+      accountName.hashCode ^
+      transactionType.hashCode ^
+      amount.hashCode ^
+      currency.hashCode ^
+      frequency.hashCode ^
+      startDate.hashCode ^
+      autoApply.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is RecurringRuleDto &&
+          runtimeType == other.runtimeType &&
+          id == other.id &&
+          accountId == other.accountId &&
+          accountName == other.accountName &&
+          transactionType == other.transactionType &&
+          amount == other.amount &&
+          currency == other.currency &&
+          frequency == other.frequency &&
+          startDate == other.startDate &&
+          autoApply == other.autoApply;
 }
 
 /// DTO con los datos de creación inicial del vault.

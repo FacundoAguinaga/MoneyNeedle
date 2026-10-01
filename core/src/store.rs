@@ -434,6 +434,306 @@ pub fn get_or_create_category(conn: &Connection, name: &str) -> Result<[u8; 16],
     Ok(*cat_id.as_bytes())
 }
 
+#[derive(Debug, Clone, PartialEq)]
+pub struct AccountWithBalance {
+    pub id: String,
+    pub name: String,
+    pub account_type: String,
+    pub currency: String,
+    pub initial_balance: f64,
+    pub current_balance: f64,
+    pub color: String,
+    pub icon: String,
+    pub credit_limit: Option<f64>,
+    pub closing_day: Option<i32>,
+    pub due_day: Option<i32>,
+}
+
+pub fn create_account(
+    conn: &Connection,
+    name: &str,
+    account_type: &AccountType,
+    currency: &str,
+    initial_balance_cents: i64,
+    credit_limit_cents: Option<i64>,
+    closing_day: Option<i32>,
+    due_day: Option<i32>,
+    color: &str,
+    icon: &str,
+) -> Result<String, String> {
+    let id = Uuid::now_v7();
+    let now = now_ms();
+    conn.execute(
+        "INSERT INTO accounts (id, name, account_type, currency, initial_balance, color, icon, credit_limit, closing_day, due_day, created_at, updated_at)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?11)",
+        params![
+            id.as_bytes().as_slice(),
+            name,
+            account_type.as_str(),
+            currency,
+            initial_balance_cents,
+            color,
+            icon,
+            credit_limit_cents,
+            closing_day,
+            due_day,
+            now,
+        ],
+    )
+    .map_err(|e| e.to_string())?;
+
+    Ok(id.to_string())
+}
+
+pub fn list_accounts(conn: &Connection) -> Result<Vec<AccountWithBalance>, String> {
+    let mut stmt = conn
+        .prepare(
+            "SELECT id, name, account_type, currency, initial_balance, color, icon, credit_limit, closing_day, due_day
+             FROM accounts
+             WHERE deleted_at IS NULL
+             ORDER BY created_at ASC",
+        )
+        .map_err(|e| e.to_string())?;
+
+    let rows = stmt
+        .query_map([], |row| {
+            let id_raw: Vec<u8> = row.get(0)?;
+            let mut id_bytes = [0u8; 16];
+            id_bytes.copy_from_slice(&id_raw[..16]);
+            let id_str = Uuid::from_bytes(id_bytes).to_string();
+
+            let name: String = row.get(1)?;
+            let atype: String = row.get(2)?;
+            let curr: String = row.get(3)?;
+            let init_cents: i64 = row.get(4)?;
+            let color: String = row.get(5)?;
+            let icon: String = row.get(6)?;
+            let limit_cents: Option<i64> = row.get(7)?;
+            let closing: Option<i32> = row.get(8)?;
+            let due: Option<i32> = row.get(9)?;
+
+            Ok((id_bytes, id_str, name, atype, curr, init_cents, color, icon, limit_cents, closing, due))
+        })
+        .map_err(|e| e.to_string())?;
+
+    let mut out = Vec::new();
+    for r in rows {
+        let (id_bytes, id_str, name, atype, curr, init_cents, color, icon, limit_cents, closing, due) = r.map_err(|e| e.to_string())?;
+        let current_cents = get_account_balance(conn, &id_bytes).unwrap_or(init_cents);
+        out.push(AccountWithBalance {
+            id: id_str,
+            name,
+            account_type: atype,
+            currency: curr,
+            initial_balance: init_cents as f64 / 100.0,
+            current_balance: current_cents as f64 / 100.0,
+            color,
+            icon,
+            credit_limit: limit_cents.map(|c| c as f64 / 100.0),
+            closing_day: closing,
+            due_day: due,
+        });
+    }
+
+    Ok(out)
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct CardStatementItem {
+    pub installment_id: String,
+    pub transaction_id: String,
+    pub installment_number: i32,
+    pub total_installments: i32,
+    pub amount: f64,
+    pub description: String,
+    pub status: String,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct CardStatement {
+    pub card_id: String,
+    pub cycle_year: i32,
+    pub cycle_month: i32,
+    pub total_due: f64,
+    pub items: Vec<CardStatementItem>,
+}
+
+pub fn get_card_statement(
+    conn: &Connection,
+    card_id: &[u8; 16],
+    cycle_year: i32,
+    cycle_month: i32,
+) -> Result<CardStatement, String> {
+    let mut stmt = conn
+        .prepare(
+            "SELECT i.id, i.transaction_id, i.installment_number, i.total_installments,
+                    i.amount, COALESCE(t.notes, ''), i.status
+             FROM installments i
+             JOIN transactions t ON i.transaction_id = t.id
+             WHERE i.account_id = ?1 AND i.cycle_year = ?2 AND i.cycle_month = ?3 AND i.deleted_at IS NULL
+             ORDER BY i.due_date ASC",
+        )
+        .map_err(|e| e.to_string())?;
+
+    let rows = stmt
+        .query_map(params![card_id.as_slice(), cycle_year, cycle_month], |row| {
+            let inst_id_raw: Vec<u8> = row.get(0)?;
+            let tx_id_raw: Vec<u8> = row.get(1)?;
+            let mut i_id = [0u8; 16];
+            i_id.copy_from_slice(&inst_id_raw[..16]);
+            let mut t_id = [0u8; 16];
+            t_id.copy_from_slice(&tx_id_raw[..16]);
+
+            let num: i32 = row.get(2)?;
+            let total: i32 = row.get(3)?;
+            let amount_cents: i64 = row.get(4)?;
+            let desc: String = row.get(5)?;
+            let status: String = row.get(6)?;
+
+            Ok(CardStatementItem {
+                installment_id: Uuid::from_bytes(i_id).to_string(),
+                transaction_id: Uuid::from_bytes(t_id).to_string(),
+                installment_number: num,
+                total_installments: total,
+                amount: amount_cents as f64 / 100.0,
+                description: desc,
+                status,
+            })
+        })
+        .map_err(|e| e.to_string())?;
+
+    let mut items = Vec::new();
+    let mut total_cents = 0i64;
+    for r in rows {
+        let item = r.map_err(|e| e.to_string())?;
+        total_cents += (item.amount * 100.0).round() as i64;
+        items.push(item);
+    }
+
+    Ok(CardStatement {
+        card_id: Uuid::from_bytes(*card_id).to_string(),
+        cycle_year,
+        cycle_month,
+        total_due: total_cents as f64 / 100.0,
+        items,
+    })
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct RecurringRuleView {
+    pub id: String,
+    pub account_id: String,
+    pub account_name: String,
+    pub transaction_type: String,
+    pub amount: f64,
+    pub currency: String,
+    pub frequency: String,
+    pub start_date: i64,
+    pub auto_apply: bool,
+}
+
+pub fn create_recurring_rule(
+    conn: &Connection,
+    account_id: &[u8; 16],
+    transaction_type: &TransactionType,
+    amount_cents: i64,
+    currency: &str,
+    frequency: &Frequency,
+    auto_apply: bool,
+) -> Result<String, String> {
+    let id = Uuid::now_v7();
+    let now = now_ms();
+    conn.execute(
+        "INSERT INTO recurring_rules (id, account_id, transaction_type, amount, currency, frequency, start_date, auto_apply, created_at, updated_at)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?7, ?7)",
+        params![
+            id.as_bytes().as_slice(),
+            account_id.as_slice(),
+            transaction_type.as_str(),
+            amount_cents,
+            currency,
+            frequency.as_str(),
+            now,
+            if auto_apply { 1 } else { 0 },
+        ],
+    )
+    .map_err(|e| e.to_string())?;
+
+    Ok(id.to_string())
+}
+
+pub fn list_recurring_rules(conn: &Connection) -> Result<Vec<RecurringRuleView>, String> {
+    let mut stmt = conn
+        .prepare(
+            "SELECT r.id, r.account_id, COALESCE(a.name, 'Cuenta'), r.transaction_type,
+                    r.amount, r.currency, r.frequency, r.start_date, r.auto_apply
+             FROM recurring_rules r
+             LEFT JOIN accounts a ON r.account_id = a.id
+             WHERE r.deleted_at IS NULL
+             ORDER BY r.created_at DESC",
+        )
+        .map_err(|e| e.to_string())?;
+
+    let rows = stmt
+        .query_map([], |row| {
+            let id_raw: Vec<u8> = row.get(0)?;
+            let acc_raw: Vec<u8> = row.get(1)?;
+            let mut i_id = [0u8; 16];
+            i_id.copy_from_slice(&id_raw[..16]);
+            let mut a_id = [0u8; 16];
+            a_id.copy_from_slice(&acc_raw[..16]);
+
+            let aname: String = row.get(2)?;
+            let ttype: String = row.get(3)?;
+            let cents: i64 = row.get(4)?;
+            let curr: String = row.get(5)?;
+            let freq: String = row.get(6)?;
+            let sdate: i64 = row.get(7)?;
+            let auto: bool = row.get::<_, i64>(8)? == 1;
+
+            Ok(RecurringRuleView {
+                id: Uuid::from_bytes(i_id).to_string(),
+                account_id: Uuid::from_bytes(a_id).to_string(),
+                account_name: aname,
+                transaction_type: ttype,
+                amount: cents as f64 / 100.0,
+                currency: curr,
+                frequency: freq,
+                start_date: sdate,
+                auto_apply: auto,
+            })
+        })
+        .map_err(|e| e.to_string())?;
+
+    let mut out = Vec::new();
+    for r in rows {
+        out.push(r.map_err(|e| e.to_string())?);
+    }
+    Ok(out)
+}
+
+pub fn delete_account(conn: &Connection, id: &[u8; 16]) -> Result<bool, String> {
+    let now = now_ms();
+    let affected = conn
+        .execute(
+            "UPDATE accounts SET deleted_at = ?1 WHERE id = ?2 AND deleted_at IS NULL",
+            params![now, id.as_slice()],
+        )
+        .map_err(|e| e.to_string())?;
+    Ok(affected > 0)
+}
+
+pub fn delete_recurring_rule(conn: &Connection, id: &[u8; 16]) -> Result<bool, String> {
+    let now = now_ms();
+    let affected = conn
+        .execute(
+            "UPDATE recurring_rules SET deleted_at = ?1 WHERE id = ?2 AND deleted_at IS NULL",
+            params![now, id.as_slice()],
+        )
+        .map_err(|e| e.to_string())?;
+    Ok(affected > 0)
+}
+
 /// Inserta un movimiento simple y devuelve su UUID en formato string.
 #[allow(clippy::too_many_arguments)]
 pub fn insert(
@@ -446,6 +746,22 @@ pub fn insert(
     fecha: &str, // YYYY-MM-DD
     frase: &str,
 ) -> Result<String, String> {
+    insert_with_account(conn, None, tipo, monto, moneda, categoria, descripcion, fecha, frase)
+}
+
+/// Inserta un movimiento con cuenta explícita (o fallback a default si None).
+#[allow(clippy::too_many_arguments)]
+pub fn insert_with_account(
+    conn: &Connection,
+    account_id_opt: Option<&[u8; 16]>,
+    tipo: &TipoMovimiento,
+    monto: f64,
+    moneda: &str,
+    categoria: &str,
+    descripcion: &str,
+    fecha: &str,
+    frase: &str,
+) -> Result<String, String> {
     if monto <= 0.0 {
         return Err("monto debe ser > 0".into());
     }
@@ -453,7 +769,10 @@ pub fn insert(
         return Err("fecha debe ser YYYY-MM-DD".into());
     }
 
-    let account_id = get_default_account_id(conn)?;
+    let account_id = match account_id_opt {
+        Some(acc) => *acc,
+        None => get_default_account_id(conn)?,
+    };
     let category_id = get_or_create_category(conn, categoria)?;
     let monto_centavos = (monto * 100.0).round() as i64;
     let tx_type = match tipo {
@@ -477,7 +796,7 @@ pub fn insert(
             monto_centavos,
             moneda,
             descripcion,
-            now, // guardamos timestamp de inserción
+            now,
             frase,
             now,
         ],

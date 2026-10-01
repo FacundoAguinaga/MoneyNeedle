@@ -27,13 +27,38 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   String dco_decode_String(dynamic raw);
 
   @protected
+  AccountDto dco_decode_account_dto(dynamic raw);
+
+  @protected
   bool dco_decode_bool(dynamic raw);
+
+  @protected
+  double dco_decode_box_autoadd_f_64(dynamic raw);
+
+  @protected
+  int dco_decode_box_autoadd_i_32(dynamic raw);
+
+  @protected
+  CardStatementDto dco_decode_card_statement_dto(dynamic raw);
+
+  @protected
+  CardStatementItemDto dco_decode_card_statement_item_dto(dynamic raw);
 
   @protected
   double dco_decode_f_64(dynamic raw);
 
   @protected
+  int dco_decode_i_32(dynamic raw);
+
+  @protected
   PlatformInt64 dco_decode_i_64(dynamic raw);
+
+  @protected
+  List<AccountDto> dco_decode_list_account_dto(dynamic raw);
+
+  @protected
+  List<CardStatementItemDto> dco_decode_list_card_statement_item_dto(
+      dynamic raw);
 
   @protected
   List<MovementDto> dco_decode_list_movement_dto(dynamic raw);
@@ -42,13 +67,25 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   Uint8List dco_decode_list_prim_u_8_strict(dynamic raw);
 
   @protected
+  List<RecurringRuleDto> dco_decode_list_recurring_rule_dto(dynamic raw);
+
+  @protected
   MovementDto dco_decode_movement_dto(dynamic raw);
 
   @protected
   String? dco_decode_opt_String(dynamic raw);
 
   @protected
+  double? dco_decode_opt_box_autoadd_f_64(dynamic raw);
+
+  @protected
+  int? dco_decode_opt_box_autoadd_i_32(dynamic raw);
+
+  @protected
   ProposalDto dco_decode_proposal_dto(dynamic raw);
+
+  @protected
+  RecurringRuleDto dco_decode_recurring_rule_dto(dynamic raw);
 
   @protected
   int dco_decode_u_8(dynamic raw);
@@ -66,13 +103,39 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   String sse_decode_String(SseDeserializer deserializer);
 
   @protected
+  AccountDto sse_decode_account_dto(SseDeserializer deserializer);
+
+  @protected
   bool sse_decode_bool(SseDeserializer deserializer);
+
+  @protected
+  double sse_decode_box_autoadd_f_64(SseDeserializer deserializer);
+
+  @protected
+  int sse_decode_box_autoadd_i_32(SseDeserializer deserializer);
+
+  @protected
+  CardStatementDto sse_decode_card_statement_dto(SseDeserializer deserializer);
+
+  @protected
+  CardStatementItemDto sse_decode_card_statement_item_dto(
+      SseDeserializer deserializer);
 
   @protected
   double sse_decode_f_64(SseDeserializer deserializer);
 
   @protected
+  int sse_decode_i_32(SseDeserializer deserializer);
+
+  @protected
   PlatformInt64 sse_decode_i_64(SseDeserializer deserializer);
+
+  @protected
+  List<AccountDto> sse_decode_list_account_dto(SseDeserializer deserializer);
+
+  @protected
+  List<CardStatementItemDto> sse_decode_list_card_statement_item_dto(
+      SseDeserializer deserializer);
 
   @protected
   List<MovementDto> sse_decode_list_movement_dto(SseDeserializer deserializer);
@@ -81,13 +144,26 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   Uint8List sse_decode_list_prim_u_8_strict(SseDeserializer deserializer);
 
   @protected
+  List<RecurringRuleDto> sse_decode_list_recurring_rule_dto(
+      SseDeserializer deserializer);
+
+  @protected
   MovementDto sse_decode_movement_dto(SseDeserializer deserializer);
 
   @protected
   String? sse_decode_opt_String(SseDeserializer deserializer);
 
   @protected
+  double? sse_decode_opt_box_autoadd_f_64(SseDeserializer deserializer);
+
+  @protected
+  int? sse_decode_opt_box_autoadd_i_32(SseDeserializer deserializer);
+
+  @protected
   ProposalDto sse_decode_proposal_dto(SseDeserializer deserializer);
+
+  @protected
+  RecurringRuleDto sse_decode_recurring_rule_dto(SseDeserializer deserializer);
 
   @protected
   int sse_decode_u_8(SseDeserializer deserializer);
@@ -99,9 +175,6 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   VaultInitDto sse_decode_vault_init_dto(SseDeserializer deserializer);
 
   @protected
-  int sse_decode_i_32(SseDeserializer deserializer);
-
-  @protected
   void sse_encode_AnyhowException(
       AnyhowException self, SseSerializer serializer);
 
@@ -109,13 +182,41 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_encode_String(String self, SseSerializer serializer);
 
   @protected
+  void sse_encode_account_dto(AccountDto self, SseSerializer serializer);
+
+  @protected
   void sse_encode_bool(bool self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_box_autoadd_f_64(double self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_box_autoadd_i_32(int self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_card_statement_dto(
+      CardStatementDto self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_card_statement_item_dto(
+      CardStatementItemDto self, SseSerializer serializer);
 
   @protected
   void sse_encode_f_64(double self, SseSerializer serializer);
 
   @protected
+  void sse_encode_i_32(int self, SseSerializer serializer);
+
+  @protected
   void sse_encode_i_64(PlatformInt64 self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_list_account_dto(
+      List<AccountDto> self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_list_card_statement_item_dto(
+      List<CardStatementItemDto> self, SseSerializer serializer);
 
   @protected
   void sse_encode_list_movement_dto(
@@ -126,13 +227,27 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
       Uint8List self, SseSerializer serializer);
 
   @protected
+  void sse_encode_list_recurring_rule_dto(
+      List<RecurringRuleDto> self, SseSerializer serializer);
+
+  @protected
   void sse_encode_movement_dto(MovementDto self, SseSerializer serializer);
 
   @protected
   void sse_encode_opt_String(String? self, SseSerializer serializer);
 
   @protected
+  void sse_encode_opt_box_autoadd_f_64(double? self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_opt_box_autoadd_i_32(int? self, SseSerializer serializer);
+
+  @protected
   void sse_encode_proposal_dto(ProposalDto self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_recurring_rule_dto(
+      RecurringRuleDto self, SseSerializer serializer);
 
   @protected
   void sse_encode_u_8(int self, SseSerializer serializer);
@@ -142,9 +257,6 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_vault_init_dto(VaultInitDto self, SseSerializer serializer);
-
-  @protected
-  void sse_encode_i_32(int self, SseSerializer serializer);
 }
 
 // Section: wire_class
