@@ -25,6 +25,7 @@ class HomeTabState extends State<HomeTab> {
   List<MovementDto> _movimientos = [];
   List<AccountDto> _accounts = [];
   List<CategoryDto> _categories = [];
+  List<FinancialInsightDto> _insights = [];
   PendingProposal? _pending;
   bool _loading = true;
   bool _confirmando = false;
@@ -55,6 +56,7 @@ class HomeTabState extends State<HomeTab> {
       final movs = await listMovements(dbPath: dbPath, limit: 50);
       final accs = await listAccounts(dbPath: dbPath);
       final cats = await listCategories(dbPath: dbPath);
+      final insights = await getFinancialInsights(dbPath: dbPath, currency: 'ARS');
 
       if (!mounted) return;
       setState(() {
@@ -63,6 +65,7 @@ class HomeTabState extends State<HomeTab> {
         _movimientos = movs;
         _accounts = accs;
         _categories = cats;
+        _insights = insights;
         _loading = false;
       });
     } catch (_) {
@@ -353,6 +356,13 @@ class HomeTabState extends State<HomeTab> {
           children: [
             // Resumen Financiero Compacto
             _buildSummaryHeader(),
+
+            // Carrusel de Insights Accionables
+            if (_insights.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: InsightsCarousel(insights: _insights),
+              ),
 
             // Tarjeta de Propuesta Interactiva NLP (si está pendiente)
             if (_pending != null)

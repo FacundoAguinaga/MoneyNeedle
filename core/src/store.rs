@@ -1603,7 +1603,7 @@ pub fn export_corrections_jsonl(conn: &Connection, tools_json: &str) -> Result<S
 }
 
 /// Formateador simple de fecha YYYY-MM-DD sin añadir crates de tiempo pesados.
-mod chrono_mock {
+pub(crate) mod chrono_mock {
     pub struct NaiveDate {
         pub year: i32,
         pub month: u32,

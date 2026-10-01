@@ -39,7 +39,7 @@ flutter_rust_bridge::frb_generated_boilerplate!(
     default_rust_auto_opaque = RustAutoOpaqueMoi,
 );
 pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_VERSION: &str = "2.13.0";
-pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = -1910779077;
+pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = 1335435045;
 
 // Section: executor
 
@@ -942,6 +942,43 @@ fn wire__crate__api__get_category_spending_report_impl(
                             api_end_date_ms,
                             api_currency,
                         )?;
+                        std::result::Result::Ok(output_ok)
+                    })(),
+                )
+            }
+        },
+    )
+}
+fn wire__crate__api__get_financial_insights_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::SseCodec, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "get_financial_insights",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_db_path = <String>::sse_decode(&mut deserializer);
+            let api_currency = <String>::sse_decode(&mut deserializer);
+            deserializer.end();
+            move |context| {
+                transform_result_sse::<_, flutter_rust_bridge::for_generated::anyhow::Error>(
+                    (move || {
+                        let output_ok =
+                            crate::api::get_financial_insights(api_db_path, api_currency)?;
                         std::result::Result::Ok(output_ok)
                     })(),
                 )
@@ -2270,6 +2307,28 @@ impl SseDecode for f64 {
     }
 }
 
+impl SseDecode for crate::api::FinancialInsightDto {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_title = <String>::sse_decode(deserializer);
+        let mut var_message = <String>::sse_decode(deserializer);
+        let mut var_insightType = <String>::sse_decode(deserializer);
+        let mut var_safeToSpendDaily = <Option<f64>>::sse_decode(deserializer);
+        let mut var_projectedMonthExpense = <f64>::sse_decode(deserializer);
+        let mut var_topIncreasingCategory = <Option<String>>::sse_decode(deserializer);
+        let mut var_topIncreasingPercentage = <Option<f64>>::sse_decode(deserializer);
+        return crate::api::FinancialInsightDto {
+            title: var_title,
+            message: var_message,
+            insight_type: var_insightType,
+            safe_to_spend_daily: var_safeToSpendDaily,
+            projected_month_expense: var_projectedMonthExpense,
+            top_increasing_category: var_topIncreasingCategory,
+            top_increasing_percentage: var_topIncreasingPercentage,
+        };
+    }
+}
+
 impl SseDecode for crate::api::FinancialKpisDto {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
@@ -2421,6 +2480,18 @@ impl SseDecode for Vec<crate::api::ExchangeRateDto> {
         let mut ans_ = Vec::with_capacity(len_ as usize);
         for idx_ in 0..len_ {
             ans_.push(<crate::api::ExchangeRateDto>::sse_decode(deserializer));
+        }
+        return ans_;
+    }
+}
+
+impl SseDecode for Vec<crate::api::FinancialInsightDto> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut len_ = <i32>::sse_decode(deserializer);
+        let mut ans_ = Vec::with_capacity(len_ as usize);
+        for idx_ in 0..len_ {
+            ans_.push(<crate::api::FinancialInsightDto>::sse_decode(deserializer));
         }
         return ans_;
     }
@@ -2733,35 +2804,36 @@ fn pde_ffi_dispatcher_primary_impl(
         22 => {
             wire__crate__api__get_category_spending_report_impl(port, ptr, rust_vec_len, data_len)
         }
-        23 => wire__crate__api__get_financial_kpis_impl(port, ptr, rust_vec_len, data_len),
-        24 => wire__crate__api__get_home_summary_impl(port, ptr, rust_vec_len, data_len),
-        25 => wire__crate__api__get_installment_commitments_impl(port, ptr, rust_vec_len, data_len),
-        26 => wire__crate__api__get_latest_exchange_rate_impl(port, ptr, rust_vec_len, data_len),
-        27 => {
+        23 => wire__crate__api__get_financial_insights_impl(port, ptr, rust_vec_len, data_len),
+        24 => wire__crate__api__get_financial_kpis_impl(port, ptr, rust_vec_len, data_len),
+        25 => wire__crate__api__get_home_summary_impl(port, ptr, rust_vec_len, data_len),
+        26 => wire__crate__api__get_installment_commitments_impl(port, ptr, rust_vec_len, data_len),
+        27 => wire__crate__api__get_latest_exchange_rate_impl(port, ptr, rust_vec_len, data_len),
+        28 => {
             wire__crate__api__get_monthly_cashflow_history_impl(port, ptr, rust_vec_len, data_len)
         }
-        28 => wire__crate__api__get_usage_streak_impl(port, ptr, rust_vec_len, data_len),
-        29 => wire__crate__api__init_database_impl(port, ptr, rust_vec_len, data_len),
-        30 => wire__crate__api__list_accounts_impl(port, ptr, rust_vec_len, data_len),
-        31 => wire__crate__api__list_budgets_status_impl(port, ptr, rust_vec_len, data_len),
-        32 => wire__crate__api__list_categories_impl(port, ptr, rust_vec_len, data_len),
-        33 => wire__crate__api__list_exchange_rates_impl(port, ptr, rust_vec_len, data_len),
-        34 => wire__crate__api__list_movements_impl(port, ptr, rust_vec_len, data_len),
-        35 => wire__crate__api__list_recurring_rules_impl(port, ptr, rust_vec_len, data_len),
-        36 => wire__crate__api__list_saving_goals_impl(port, ptr, rust_vec_len, data_len),
-        37 => wire__crate__api__lock_database_impl(port, ptr, rust_vec_len, data_len),
-        38 => wire__crate__api__process_recurring_rules_impl(port, ptr, rust_vec_len, data_len),
-        39 => wire__crate__api__propose_mocked_impl(port, ptr, rust_vec_len, data_len),
-        40 => wire__crate__api__propose_real_impl(port, ptr, rust_vec_len, data_len),
-        41 => wire__crate__api__recover_master_key_impl(port, ptr, rust_vec_len, data_len),
-        42 => wire__crate__api__restore_encrypted_backup_impl(port, ptr, rust_vec_len, data_len),
-        43 => wire__crate__api__restore_movement_impl(port, ptr, rust_vec_len, data_len),
-        44 => wire__crate__api__search_movements_impl(port, ptr, rust_vec_len, data_len),
-        45 => wire__crate__api__set_category_budget_impl(port, ptr, rust_vec_len, data_len),
-        46 => wire__crate__api__update_account_impl(port, ptr, rust_vec_len, data_len),
-        47 => wire__crate__api__update_category_impl(port, ptr, rust_vec_len, data_len),
-        48 => wire__crate__api__update_movement_impl(port, ptr, rust_vec_len, data_len),
-        49 => wire__crate__api__update_recurring_rule_impl(port, ptr, rust_vec_len, data_len),
+        29 => wire__crate__api__get_usage_streak_impl(port, ptr, rust_vec_len, data_len),
+        30 => wire__crate__api__init_database_impl(port, ptr, rust_vec_len, data_len),
+        31 => wire__crate__api__list_accounts_impl(port, ptr, rust_vec_len, data_len),
+        32 => wire__crate__api__list_budgets_status_impl(port, ptr, rust_vec_len, data_len),
+        33 => wire__crate__api__list_categories_impl(port, ptr, rust_vec_len, data_len),
+        34 => wire__crate__api__list_exchange_rates_impl(port, ptr, rust_vec_len, data_len),
+        35 => wire__crate__api__list_movements_impl(port, ptr, rust_vec_len, data_len),
+        36 => wire__crate__api__list_recurring_rules_impl(port, ptr, rust_vec_len, data_len),
+        37 => wire__crate__api__list_saving_goals_impl(port, ptr, rust_vec_len, data_len),
+        38 => wire__crate__api__lock_database_impl(port, ptr, rust_vec_len, data_len),
+        39 => wire__crate__api__process_recurring_rules_impl(port, ptr, rust_vec_len, data_len),
+        40 => wire__crate__api__propose_mocked_impl(port, ptr, rust_vec_len, data_len),
+        41 => wire__crate__api__propose_real_impl(port, ptr, rust_vec_len, data_len),
+        42 => wire__crate__api__recover_master_key_impl(port, ptr, rust_vec_len, data_len),
+        43 => wire__crate__api__restore_encrypted_backup_impl(port, ptr, rust_vec_len, data_len),
+        44 => wire__crate__api__restore_movement_impl(port, ptr, rust_vec_len, data_len),
+        45 => wire__crate__api__search_movements_impl(port, ptr, rust_vec_len, data_len),
+        46 => wire__crate__api__set_category_budget_impl(port, ptr, rust_vec_len, data_len),
+        47 => wire__crate__api__update_account_impl(port, ptr, rust_vec_len, data_len),
+        48 => wire__crate__api__update_category_impl(port, ptr, rust_vec_len, data_len),
+        49 => wire__crate__api__update_movement_impl(port, ptr, rust_vec_len, data_len),
+        50 => wire__crate__api__update_recurring_rule_impl(port, ptr, rust_vec_len, data_len),
         _ => unreachable!(),
     }
 }
@@ -3010,6 +3082,32 @@ impl flutter_rust_bridge::IntoIntoDart<crate::api::ExchangeRateDto>
     for crate::api::ExchangeRateDto
 {
     fn into_into_dart(self) -> crate::api::ExchangeRateDto {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::api::FinancialInsightDto {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.title.into_into_dart().into_dart(),
+            self.message.into_into_dart().into_dart(),
+            self.insight_type.into_into_dart().into_dart(),
+            self.safe_to_spend_daily.into_into_dart().into_dart(),
+            self.projected_month_expense.into_into_dart().into_dart(),
+            self.top_increasing_category.into_into_dart().into_dart(),
+            self.top_increasing_percentage.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::api::FinancialInsightDto
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::api::FinancialInsightDto>
+    for crate::api::FinancialInsightDto
+{
+    fn into_into_dart(self) -> crate::api::FinancialInsightDto {
         self
     }
 }
@@ -3362,6 +3460,19 @@ impl SseEncode for f64 {
     }
 }
 
+impl SseEncode for crate::api::FinancialInsightDto {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <String>::sse_encode(self.title, serializer);
+        <String>::sse_encode(self.message, serializer);
+        <String>::sse_encode(self.insight_type, serializer);
+        <Option<f64>>::sse_encode(self.safe_to_spend_daily, serializer);
+        <f64>::sse_encode(self.projected_month_expense, serializer);
+        <Option<String>>::sse_encode(self.top_increasing_category, serializer);
+        <Option<f64>>::sse_encode(self.top_increasing_percentage, serializer);
+    }
+}
+
 impl SseEncode for crate::api::FinancialKpisDto {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
@@ -3477,6 +3588,16 @@ impl SseEncode for Vec<crate::api::ExchangeRateDto> {
         <i32>::sse_encode(self.len() as _, serializer);
         for item in self {
             <crate::api::ExchangeRateDto>::sse_encode(item, serializer);
+        }
+    }
+}
+
+impl SseEncode for Vec<crate::api::FinancialInsightDto> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <i32>::sse_encode(self.len() as _, serializer);
+        for item in self {
+            <crate::api::FinancialInsightDto>::sse_encode(item, serializer);
         }
     }
 }

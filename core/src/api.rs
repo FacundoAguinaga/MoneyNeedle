@@ -1179,6 +1179,42 @@ pub fn restore_encrypted_backup(
     Ok(BackupRestoreSummaryDto::from(summary))
 }
 
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct FinancialInsightDto {
+    pub title: String,
+    pub message: String,
+    pub insight_type: String, // "projection", "tip", "info", "warning"
+    pub safe_to_spend_daily: Option<f64>,
+    pub projected_month_expense: f64,
+    pub top_increasing_category: Option<String>,
+    pub top_increasing_percentage: Option<f64>,
+}
+
+impl From<crate::insights::FinancialInsight> for FinancialInsightDto {
+    fn from(i: crate::insights::FinancialInsight) -> Self {
+        Self {
+            title: i.title,
+            message: i.message,
+            insight_type: i.insight_type,
+            safe_to_spend_daily: i.safe_to_spend_daily,
+            projected_month_expense: i.projected_month_expense,
+            top_increasing_category: i.top_increasing_category,
+            top_increasing_percentage: i.top_increasing_percentage,
+        }
+    }
+}
+
+/// Genera recomendaciones y métricas predictivas automáticas para el usuario.
+pub fn get_financial_insights(
+    db_path: String,
+    currency: String,
+) -> anyhow::Result<Vec<FinancialInsightDto>> {
+    let conn = store::open_default(&db_path).map_err(|e| anyhow::anyhow!("{e}"))?;
+    let list = crate::insights::generate_financial_insights(&conn, &currency)
+        .map_err(|e| anyhow::anyhow!("{e}"))?;
+    Ok(list.into_iter().map(FinancialInsightDto::from).collect())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1729,6 +1765,10 @@ mod tests {
         ).unwrap());
 
         assert!(delete_category(db_path.clone(), cat_id).unwrap());
+
+        // 7. Insights financieros
+        let insights = get_financial_insights(db_path.clone(), "ARS".into()).unwrap();
+        assert!(!insights.is_empty());
 
         let _ = std::fs::remove_file(&db_path);
     }

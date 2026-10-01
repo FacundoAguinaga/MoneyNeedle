@@ -8,7 +8,7 @@ import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
 // These functions are ignored because they are not marked as `pub`: `engine`
 // These types are ignored because they are neither used by any `pub` functions nor (for structs and enums) marked `#[frb(unignore)]`: `Engine`
-// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`
+// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`
 
 /// Pipeline con inferencia mockeada: verifica el cableado sin modelo.
 Future<ProposalDto> proposeMocked(
@@ -469,6 +469,12 @@ Future<BackupRestoreSummaryDto> restoreEncryptedBackup(
     RustLib.instance.api.crateApiRestoreEncryptedBackup(
         dbPath: dbPath, backupBytes: backupBytes, passphrase: passphrase);
 
+/// Genera recomendaciones y métricas predictivas automáticas para el usuario.
+Future<List<FinancialInsightDto>> getFinancialInsights(
+        {required String dbPath, required String currency}) =>
+    RustLib.instance.api
+        .crateApiGetFinancialInsights(dbPath: dbPath, currency: currency);
+
 /// DTO para cuentas y saldos en UI.
 class AccountDto {
   final String id;
@@ -893,6 +899,49 @@ class ExchangeRateDto {
           quoteCurrency == other.quoteCurrency &&
           rate == other.rate &&
           timestamp == other.timestamp;
+}
+
+class FinancialInsightDto {
+  final String title;
+  final String message;
+  final String insightType;
+  final double? safeToSpendDaily;
+  final double projectedMonthExpense;
+  final String? topIncreasingCategory;
+  final double? topIncreasingPercentage;
+
+  const FinancialInsightDto({
+    required this.title,
+    required this.message,
+    required this.insightType,
+    this.safeToSpendDaily,
+    required this.projectedMonthExpense,
+    this.topIncreasingCategory,
+    this.topIncreasingPercentage,
+  });
+
+  @override
+  int get hashCode =>
+      title.hashCode ^
+      message.hashCode ^
+      insightType.hashCode ^
+      safeToSpendDaily.hashCode ^
+      projectedMonthExpense.hashCode ^
+      topIncreasingCategory.hashCode ^
+      topIncreasingPercentage.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is FinancialInsightDto &&
+          runtimeType == other.runtimeType &&
+          title == other.title &&
+          message == other.message &&
+          insightType == other.insightType &&
+          safeToSpendDaily == other.safeToSpendDaily &&
+          projectedMonthExpense == other.projectedMonthExpense &&
+          topIncreasingCategory == other.topIncreasingCategory &&
+          topIncreasingPercentage == other.topIncreasingPercentage;
 }
 
 class FinancialKpisDto {
