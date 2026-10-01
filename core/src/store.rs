@@ -229,6 +229,8 @@ pub struct Movement {
     pub categoria: String,
     pub descripcion: String,
     pub fecha: String, // YYYY-MM-DD
+    pub account_id: Option<String>,
+    pub account_name: Option<String>,
 }
 
 pub fn now_ms() -> i64 {
@@ -469,12 +471,13 @@ pub struct CategoryInfo {
     pub name: String,
     pub icon: String,
     pub color: String,
+    pub is_system: bool,
 }
 
 pub fn list_categories(conn: &Connection) -> Result<Vec<CategoryInfo>, String> {
     let mut stmt = conn
         .prepare(
-            "SELECT id, name, icon, color
+            "SELECT id, name, icon, color, is_system
              FROM categories
              WHERE deleted_at IS NULL
              ORDER BY is_system DESC, name ASC",
@@ -487,11 +490,14 @@ pub fn list_categories(conn: &Connection) -> Result<Vec<CategoryInfo>, String> {
             let mut id_bytes = [0u8; 16];
             id_bytes.copy_from_slice(&id_raw);
 
+            let is_sys: i32 = row.get(4)?;
+
             Ok(CategoryInfo {
                 id: Uuid::from_bytes(id_bytes).to_string(),
                 name: row.get(1)?,
                 icon: row.get(2)?,
                 color: row.get(3)?,
+                is_system: is_sys != 0,
             })
         })
         .map_err(|e| e.to_string())?;
@@ -501,6 +507,81 @@ pub fn list_categories(conn: &Connection) -> Result<Vec<CategoryInfo>, String> {
         out.push(r.map_err(|e| e.to_string())?);
     }
     Ok(out)
+}
+
+pub fn create_category(
+    conn: &Connection,
+    name: &str,
+    icon: &str,
+    color: &str,
+    parent_id: Option<&[u8; 16]>,
+) -> Result<[u8; 16], String> {
+    let name_clean = name.trim();
+    if name_clean.is_empty() {
+        return Err("El nombre de la categoría no puede estar vacío".to_string());
+    }
+    let id = *Uuid::now_v7().as_bytes();
+    let now = now_ms();
+    conn.execute(
+        "INSERT INTO categories (id, name, icon, color, parent_id, is_system, created_at, updated_at)
+         VALUES (?1, ?2, ?3, ?4, ?5, 0, ?6, ?6)",
+        params![
+            id.as_slice(),
+            name_clean,
+            icon.trim(),
+            color.trim(),
+            parent_id.map(|p| p.as_slice()),
+            now
+        ],
+    )
+    .map_err(|e| e.to_string())?;
+    Ok(id)
+}
+
+pub fn update_category(
+    conn: &Connection,
+    category_id: &[u8; 16],
+    name: &str,
+    icon: &str,
+    color: &str,
+) -> Result<bool, String> {
+    let name_clean = name.trim();
+    if name_clean.is_empty() {
+        return Err("El nombre de la categoría no puede estar vacío".to_string());
+    }
+    let now = now_ms();
+    let affected = conn
+        .execute(
+            "UPDATE categories
+             SET name = ?1, icon = ?2, color = ?3, updated_at = ?4
+             WHERE id = ?5 AND deleted_at IS NULL",
+            params![name_clean, icon.trim(), color.trim(), now, category_id.as_slice()],
+        )
+        .map_err(|e| e.to_string())?;
+    Ok(affected > 0)
+}
+
+pub fn delete_category(conn: &Connection, category_id: &[u8; 16]) -> Result<bool, String> {
+    let is_sys: i32 = conn
+        .query_row(
+            "SELECT is_system FROM categories WHERE id = ?1 AND deleted_at IS NULL",
+            params![category_id.as_slice()],
+            |r| r.get(0),
+        )
+        .map_err(|e| e.to_string())?;
+
+    if is_sys != 0 {
+        return Err("No se pueden eliminar categorías del sistema".to_string());
+    }
+
+    let now = now_ms();
+    let affected = conn
+        .execute(
+            "UPDATE categories SET deleted_at = ?1, updated_at = ?1 WHERE id = ?2 AND is_system = 0 AND deleted_at IS NULL",
+            params![now, category_id.as_slice()],
+        )
+        .map_err(|e| e.to_string())?;
+    Ok(affected > 0)
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -798,6 +879,67 @@ pub fn delete_recurring_rule(conn: &Connection, id: &[u8; 16]) -> Result<bool, S
         .execute(
             "UPDATE recurring_rules SET deleted_at = ?1 WHERE id = ?2 AND deleted_at IS NULL",
             params![now, id.as_slice()],
+        )
+        .map_err(|e| e.to_string())?;
+    Ok(affected > 0)
+}
+
+pub fn update_account(
+    conn: &Connection,
+    account_id: &[u8; 16],
+    name: &str,
+    color: &str,
+    credit_limit: Option<i64>,
+    closing_day: Option<i32>,
+    due_day: Option<i32>,
+) -> Result<bool, String> {
+    let name_clean = name.trim();
+    if name_clean.is_empty() {
+        return Err("El nombre de la cuenta no puede estar vacío".to_string());
+    }
+    let now = now_ms();
+    let affected = conn
+        .execute(
+            "UPDATE accounts
+             SET name = ?1, color = ?2, credit_limit = ?3, closing_day = ?4, due_day = ?5, updated_at = ?6
+             WHERE id = ?7 AND deleted_at IS NULL",
+            params![
+                name_clean,
+                color.trim(),
+                credit_limit,
+                closing_day,
+                due_day,
+                now,
+                account_id.as_slice()
+            ],
+        )
+        .map_err(|e| e.to_string())?;
+    Ok(affected > 0)
+}
+
+pub fn update_recurring_rule(
+    conn: &Connection,
+    rule_id: &[u8; 16],
+    amount_cents: i64,
+    frequency: &str,
+    auto_apply: bool,
+) -> Result<bool, String> {
+    if amount_cents <= 0 {
+        return Err("El monto recurrente debe ser mayor a 0".to_string());
+    }
+    let now = now_ms();
+    let affected = conn
+        .execute(
+            "UPDATE recurring_rules
+             SET amount = ?1, frequency = ?2, auto_apply = ?3, updated_at = ?4
+             WHERE id = ?5 AND deleted_at IS NULL",
+            params![
+                amount_cents,
+                frequency,
+                if auto_apply { 1 } else { 0 },
+                now,
+                rule_id.as_slice()
+            ],
         )
         .map_err(|e| e.to_string())?;
     Ok(affected > 0)
@@ -1256,9 +1398,11 @@ pub fn list(conn: &Connection, limit: i64) -> Result<Vec<Movement>, String> {
     let mut stmt = conn
         .prepare(
             "SELECT t.id, t.transaction_type, t.amount, t.currency,
-                    COALESCE(c.name, 'general'), t.notes, t.date
+                    COALESCE(c.name, 'general'), t.notes, t.date,
+                    t.account_id, COALESCE(a.name, 'General')
              FROM transactions t
              LEFT JOIN categories c ON t.category_id = c.id
+             LEFT JOIN accounts a ON t.account_id = a.id
              WHERE t.deleted_at IS NULL
              ORDER BY t.date DESC, t.created_at DESC, t.rowid DESC
              LIMIT ?1",
@@ -1289,8 +1433,20 @@ pub fn list(conn: &Connection, limit: i64) -> Result<Vec<Movement>, String> {
             let desc: String = row.get(5)?;
             let date_ms: i64 = row.get(6)?;
 
+            let acc_blob: Option<Vec<u8>> = row.get(7)?;
+            let acc_id_str = acc_blob.and_then(|b| {
+                if b.len() == 16 {
+                    let mut arr = [0u8; 16];
+                    arr.copy_from_slice(&b);
+                    Some(Uuid::from_bytes(arr).to_string())
+                } else {
+                    None
+                }
+            });
+            let acc_name: Option<String> = row.get(8)?;
+
             // Convertir timestamp a YYYY-MM-DD
-            let secs = (date_ms / 1000) as u64;
+            let secs = (date_ms.max(0) / 1000) as u64;
             let dt: chrono_mock::NaiveDate = chrono_mock::NaiveDate::from_timestamp_opt(secs);
 
             Ok(Movement {
@@ -1302,6 +1458,8 @@ pub fn list(conn: &Connection, limit: i64) -> Result<Vec<Movement>, String> {
                 categoria: cat,
                 descripcion: desc,
                 fecha: dt.format(),
+                account_id: acc_id_str,
+                account_name: acc_name,
             })
         })
         .map_err(|e| e.to_string())?;
@@ -1473,6 +1631,31 @@ mod chrono_mock {
             }
         }
 
+        pub fn parse(s: &str) -> Option<Self> {
+            let parts: Vec<&str> = s.split('-').collect();
+            if parts.len() != 3 {
+                return None;
+            }
+            let year: i32 = parts[0].parse().ok()?;
+            let month: u32 = parts[1].parse().ok()?;
+            let day: u32 = parts[2].parse().ok()?;
+            if !(1..=12).contains(&month) || !(1..=31).contains(&day) {
+                return None;
+            }
+            Some(NaiveDate { year, month, day })
+        }
+
+        pub fn to_epoch_secs(&self) -> i64 {
+            let y = self.year as i64 - if self.month <= 2 { 1 } else { 0 };
+            let era = if y >= 0 { y } else { y - 399 } / 400;
+            let yoe = (y - era * 400) as u32;
+            let m = if self.month > 2 { self.month - 3 } else { self.month + 9 };
+            let doy = (153 * m + 2) / 5 + self.day - 1;
+            let doe = yoe * 365 + yoe / 4 - yoe / 100 + doy;
+            let days = era * 146097 + doe as i64 - 719468;
+            days * 86400
+        }
+
         pub fn format(&self) -> String {
             format!("{:04}-{:02}-{:02}", self.year, self.month, self.day)
         }
@@ -1481,6 +1664,10 @@ mod chrono_mock {
 
 pub fn format_epoch_date(epoch_secs: u64) -> String {
     chrono_mock::NaiveDate::from_timestamp_opt(epoch_secs).format()
+}
+
+pub fn parse_date_str_to_ms(s: &str) -> Option<i64> {
+    chrono_mock::NaiveDate::parse(s).map(|d| d.to_epoch_secs() * 1000)
 }
 
 // ============================================================================
@@ -2116,6 +2303,438 @@ pub fn delete_saving_goal(conn: &Connection, goal_id: &[u8; 16]) -> Result<bool,
     Ok(rows > 0)
 }
 
+// ============================================================================
+// Operaciones CRUD y Consultas Avanzadas (Fase 7-9)
+// ============================================================================
+
+/// Elimina un movimiento de forma suave (soft-delete) y revierte cuotas asociadas si existen.
+pub fn soft_delete_transaction(conn: &Connection, id: &[u8; 16]) -> Result<bool, String> {
+    let now = now_ms();
+    let affected = conn
+        .execute(
+            "UPDATE transactions SET deleted_at = ?1, updated_at = ?1 WHERE id = ?2 AND deleted_at IS NULL",
+            params![now, id.as_slice()],
+        )
+        .map_err(|e| e.to_string())?;
+
+    if affected > 0 {
+        let _ = conn.execute(
+            "UPDATE installments SET deleted_at = ?1, updated_at = ?1 WHERE transaction_id = ?2 AND deleted_at IS NULL",
+            params![now, id.as_slice()],
+        );
+        Ok(true)
+    } else {
+        Ok(false)
+    }
+}
+
+/// Restaura un movimiento previamente eliminado (undo de borrado).
+pub fn restore_transaction(conn: &Connection, id: &[u8; 16]) -> Result<bool, String> {
+    let now = now_ms();
+    let affected = conn
+        .execute(
+            "UPDATE transactions SET deleted_at = NULL, updated_at = ?1 WHERE id = ?2 AND deleted_at IS NOT NULL",
+            params![now, id.as_slice()],
+        )
+        .map_err(|e| e.to_string())?;
+
+    if affected > 0 {
+        let _ = conn.execute(
+            "UPDATE installments SET deleted_at = NULL, updated_at = ?1 WHERE transaction_id = ?2",
+            params![now, id.as_slice()],
+        );
+        Ok(true)
+    } else {
+        Ok(false)
+    }
+}
+
+/// Actualiza un movimiento existente (monto, tipo, categoría, notas, fecha y opcionalmente cuenta).
+#[allow(clippy::too_many_arguments)]
+pub fn update_transaction(
+    conn: &Connection,
+    id: &[u8; 16],
+    tipo: &str,
+    monto_centavos: i64,
+    moneda: &str,
+    categoria: &str,
+    descripcion: &str,
+    fecha_ms: i64,
+    account_id: Option<&[u8; 16]>,
+) -> Result<bool, String> {
+    if monto_centavos <= 0 {
+        return Err("El monto debe ser mayor a 0".to_string());
+    }
+    let cat_id = get_or_create_category(conn, categoria)?;
+    let now = now_ms();
+    let ttype = match tipo {
+        "income" | "ingreso" => "income",
+        "expense" | "gasto" => "expense",
+        "transfer" | "transferencia" => "transfer",
+        other => other,
+    };
+
+    let affected = if let Some(acc_id) = account_id {
+        conn.execute(
+            "UPDATE transactions
+             SET transaction_type = ?1, amount = ?2, currency = ?3, category_id = ?4,
+                 notes = ?5, date = ?6, account_id = ?7, updated_at = ?8
+             WHERE id = ?9 AND deleted_at IS NULL",
+            params![
+                ttype,
+                monto_centavos,
+                moneda,
+                cat_id.as_slice(),
+                descripcion,
+                fecha_ms,
+                acc_id.as_slice(),
+                now,
+                id.as_slice()
+            ],
+        )
+        .map_err(|e| e.to_string())?
+    } else {
+        conn.execute(
+            "UPDATE transactions
+             SET transaction_type = ?1, amount = ?2, currency = ?3, category_id = ?4,
+                 notes = ?5, date = ?6, updated_at = ?7
+             WHERE id = ?8 AND deleted_at IS NULL",
+            params![
+                ttype,
+                monto_centavos,
+                moneda,
+                cat_id.as_slice(),
+                descripcion,
+                fecha_ms,
+                now,
+                id.as_slice()
+            ],
+        )
+        .map_err(|e| e.to_string())?
+    };
+
+    Ok(affected > 0)
+}
+
+/// Búsqueda y filtrado multicriterio de movimientos con paginación.
+#[allow(clippy::too_many_arguments)]
+pub fn search_transactions(
+    conn: &Connection,
+    query_text: Option<&str>,
+    start_date_ms: Option<i64>,
+    end_date_ms: Option<i64>,
+    category_id: Option<&[u8; 16]>,
+    account_id: Option<&[u8; 16]>,
+    tipo: Option<&str>,
+    limit: i64,
+    offset: i64,
+) -> Result<Vec<Movement>, String> {
+    let mut sql = String::from(
+        "SELECT t.id, t.transaction_type, t.amount, t.currency,
+                COALESCE(c.name, 'general'), t.notes, t.date,
+                t.account_id, COALESCE(a.name, 'General')
+         FROM transactions t
+         LEFT JOIN categories c ON t.category_id = c.id
+         LEFT JOIN accounts a ON t.account_id = a.id
+         WHERE t.deleted_at IS NULL",
+    );
+
+    let mut params_vec: Vec<Box<dyn rusqlite::ToSql>> = Vec::new();
+
+    if let Some(q) = query_text {
+        let trimmed = q.trim();
+        if !trimmed.is_empty() {
+            let pattern = format!("%{trimmed}%");
+            params_vec.push(Box::new(pattern));
+            let idx = params_vec.len();
+            sql.push_str(&format!(
+                " AND (t.notes LIKE ?{idx} OR t.raw_prompt LIKE ?{idx} OR c.name LIKE ?{idx})"
+            ));
+        }
+    }
+
+    if let Some(s) = start_date_ms {
+        params_vec.push(Box::new(s));
+        let idx = params_vec.len();
+        sql.push_str(&format!(" AND t.date >= ?{idx}"));
+    }
+
+    if let Some(e) = end_date_ms {
+        params_vec.push(Box::new(e));
+        let idx = params_vec.len();
+        sql.push_str(&format!(" AND t.date <= ?{idx}"));
+    }
+
+    if let Some(cat) = category_id {
+        params_vec.push(Box::new(cat.to_vec()));
+        let idx = params_vec.len();
+        sql.push_str(&format!(" AND t.category_id = ?{idx}"));
+    }
+
+    if let Some(acc) = account_id {
+        params_vec.push(Box::new(acc.to_vec()));
+        let idx = params_vec.len();
+        sql.push_str(&format!(" AND t.account_id = ?{idx}"));
+    }
+
+    if let Some(tp) = tipo {
+        let normalized = match tp {
+            "income" | "ingreso" => "income",
+            "expense" | "gasto" => "expense",
+            "transfer" | "transferencia" => "transfer",
+            other => other,
+        };
+        params_vec.push(Box::new(normalized.to_string()));
+        let idx = params_vec.len();
+        sql.push_str(&format!(" AND t.transaction_type = ?{idx}"));
+    }
+
+    sql.push_str(" ORDER BY t.date DESC, t.created_at DESC, t.rowid DESC LIMIT ?");
+    params_vec.push(Box::new(limit.max(1)));
+    let limit_idx = params_vec.len();
+
+    sql.push_str(&format!(" OFFSET ?{}", limit_idx + 1));
+    params_vec.push(Box::new(offset.max(0)));
+
+    let mut stmt = conn.prepare(&sql).map_err(|e| e.to_string())?;
+
+    let param_refs: Vec<&dyn rusqlite::ToSql> = params_vec.iter().map(|p| p.as_ref()).collect();
+
+    let rows = stmt
+        .query_map(param_refs.as_slice(), |row| {
+            let id_blob: Vec<u8> = row.get(0)?;
+            let id_str = if id_blob.len() == 16 {
+                let mut b = [0u8; 16];
+                b.copy_from_slice(&id_blob);
+                Uuid::from_bytes(b).to_string()
+            } else {
+                Uuid::now_v7().to_string()
+            };
+
+            let ttype: String = row.get(1)?;
+            let tipo_ui = match ttype.as_str() {
+                "income" | "ingreso" => "ingreso",
+                "expense" | "gasto" => "gasto",
+                "transfer" | "transferencia" => "transferencia",
+                other => other,
+            }
+            .to_string();
+            let centavos: i64 = row.get(2)?;
+            let moneda: String = row.get(3)?;
+            let cat: String = row.get(4)?;
+            let desc: String = row.get(5)?;
+            let date_ms: i64 = row.get(6)?;
+
+            let acc_blob: Option<Vec<u8>> = row.get(7)?;
+            let acc_id_str = acc_blob.and_then(|b| {
+                if b.len() == 16 {
+                    let mut arr = [0u8; 16];
+                    arr.copy_from_slice(&b);
+                    Some(Uuid::from_bytes(arr).to_string())
+                } else {
+                    None
+                }
+            });
+            let acc_name: Option<String> = row.get(8)?;
+
+            let secs = (date_ms.max(0) / 1000) as u64;
+            let dt: chrono_mock::NaiveDate = chrono_mock::NaiveDate::from_timestamp_opt(secs);
+
+            Ok(Movement {
+                id: id_str,
+                tipo: tipo_ui,
+                monto: centavos as f64 / 100.0,
+                monto_centavos: centavos,
+                moneda,
+                categoria: cat,
+                descripcion: desc,
+                fecha: dt.format(),
+                account_id: acc_id_str,
+                account_name: acc_name,
+            })
+        })
+        .map_err(|e| e.to_string())?;
+
+    let mut out = Vec::new();
+    for r in rows {
+        out.push(r.map_err(|e| e.to_string())?);
+    }
+    Ok(out)
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct HomeSummary {
+    pub total_balance: f64,
+    pub monthly_expense: f64,
+    pub monthly_income: f64,
+    pub prev_month_expense: f64,
+    pub delta_expense_pct: Option<f64>,
+    pub currency: String,
+}
+
+/// Resumen financiero para el Home Tab (saldo consolidado por moneda, ingresos/gastos del mes y delta porcentual).
+pub fn get_home_summary(conn: &Connection, currency: &str) -> Result<HomeSummary, String> {
+    let accounts = list_accounts(conn)?;
+    let mut total_balance_cents = 0i64;
+    for acc in &accounts {
+        if acc.currency.eq_ignore_ascii_case(currency) && acc.account_type != "credit_card" {
+            total_balance_cents += (acc.current_balance * 100.0).round() as i64;
+        }
+    }
+
+    let now = now_ms();
+    let now_secs = (now / 1000) as u64;
+    let curr_date = chrono_mock::NaiveDate::from_timestamp_opt(now_secs);
+    let curr_year = curr_date.year;
+    let curr_month = curr_date.month as i32;
+
+    let (prev_year, prev_month) = if curr_month == 1 {
+        (curr_year - 1, 12)
+    } else {
+        (curr_year, curr_month - 1)
+    };
+
+    let mut stmt = conn
+        .prepare(
+            "SELECT transaction_type, amount, date
+             FROM transactions
+             WHERE deleted_at IS NULL
+               AND currency = ?1
+               AND transaction_type IN ('expense', 'income')",
+        )
+        .map_err(|e| e.to_string())?;
+
+    let rows = stmt
+        .query_map(params![currency], |row| {
+            let ttype: String = row.get(0)?;
+            let amt: i64 = row.get(1)?;
+            let date_ms: i64 = row.get(2)?;
+            Ok((ttype, amt, date_ms))
+        })
+        .map_err(|e| e.to_string())?;
+
+    let mut monthly_expense_cents = 0i64;
+    let mut monthly_income_cents = 0i64;
+    let mut prev_month_expense_cents = 0i64;
+
+    for r in rows {
+        let (ttype, amt, date_ms) = r.map_err(|e| e.to_string())?;
+        let secs = (date_ms.max(0) / 1000) as u64;
+        let d = chrono_mock::NaiveDate::from_timestamp_opt(secs);
+
+        if d.year == curr_year && d.month as i32 == curr_month {
+            if ttype == "expense" {
+                monthly_expense_cents += amt;
+            } else if ttype == "income" {
+                monthly_income_cents += amt;
+            }
+        } else if d.year == prev_year && d.month as i32 == prev_month && ttype == "expense" {
+            prev_month_expense_cents += amt;
+        }
+    }
+
+    let delta_expense_pct = if prev_month_expense_cents > 0 {
+        let delta = ((monthly_expense_cents - prev_month_expense_cents) as f64
+            / prev_month_expense_cents as f64)
+            * 100.0;
+        Some((delta * 10.0).round() / 10.0)
+    } else {
+        None
+    };
+
+    Ok(HomeSummary {
+        total_balance: total_balance_cents as f64 / 100.0,
+        monthly_expense: monthly_expense_cents as f64 / 100.0,
+        monthly_income: monthly_income_cents as f64 / 100.0,
+        prev_month_expense: prev_month_expense_cents as f64 / 100.0,
+        delta_expense_pct,
+        currency: currency.to_string(),
+    })
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct UsageStreak {
+    pub current_streak: i32,
+    pub max_streak: i32,
+    pub active_today: bool,
+}
+
+/// Calcula la racha de días consecutivos con al menos una transacción registrada.
+pub fn get_usage_streak(conn: &Connection) -> Result<UsageStreak, String> {
+    let mut stmt = conn
+        .prepare(
+            "SELECT DISTINCT date
+             FROM transactions
+             WHERE deleted_at IS NULL
+             ORDER BY date ASC",
+        )
+        .map_err(|e| e.to_string())?;
+
+    let rows = stmt
+        .query_map([], |row| {
+            let date_ms: i64 = row.get(0)?;
+            Ok(date_ms)
+        })
+        .map_err(|e| e.to_string())?;
+
+    let mut days_set = std::collections::BTreeSet::new();
+    for r in rows {
+        let ms = r.map_err(|e| e.to_string())?;
+        let day_idx = ms / 86_400_000;
+        days_set.insert(day_idx);
+    }
+
+    if days_set.is_empty() {
+        return Ok(UsageStreak {
+            current_streak: 0,
+            max_streak: 0,
+            active_today: false,
+        });
+    }
+
+    let now = now_ms();
+    let today_day_idx = now / 86_400_000;
+    let active_today = days_set.contains(&today_day_idx);
+
+    let start_check = if active_today {
+        today_day_idx
+    } else {
+        today_day_idx - 1
+    };
+
+    let mut current_streak = 0;
+    let mut cur = start_check;
+    while days_set.contains(&cur) {
+        current_streak += 1;
+        cur -= 1;
+    }
+
+    let mut max_streak = 0;
+    let mut temp_streak = 0;
+    let mut prev_day: Option<i64> = None;
+
+    for &day in &days_set {
+        match prev_day {
+            Some(p) if day == p + 1 => {
+                temp_streak += 1;
+            }
+            _ => {
+                temp_streak = 1;
+            }
+        }
+        if temp_streak > max_streak {
+            max_streak = temp_streak;
+        }
+        prev_day = Some(day);
+    }
+
+    Ok(UsageStreak {
+        current_streak,
+        max_streak,
+        active_today,
+    })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -2561,6 +3180,107 @@ mod tests {
         // Borrar meta
         assert!(delete_saving_goal(&conn, goal_uuid.as_bytes()).unwrap());
         assert_eq!(list_saving_goals(&conn).unwrap().len(), 0);
+    }
+
+    #[test]
+    fn test_crud_movements_soft_delete_and_restore() {
+        let conn = mem();
+        let id_str = insert(&conn, &Gasto, 1500.0, "ARS", "comida", "almuerzo", "2026-10-01", "gaste 1500").unwrap();
+        let uuid = Uuid::parse_str(&id_str).unwrap();
+
+        let initial_list = list(&conn, 10).unwrap();
+        assert_eq!(initial_list.len(), 1);
+        assert_eq!(initial_list[0].monto, 1500.0);
+
+        // Soft delete
+        let deleted = soft_delete_transaction(&conn, uuid.as_bytes()).unwrap();
+        assert!(deleted);
+
+        // Ya no aparece en list
+        let after_delete = list(&conn, 10).unwrap();
+        assert_eq!(after_delete.len(), 0);
+
+        // Restore
+        let restored = restore_transaction(&conn, uuid.as_bytes()).unwrap();
+        assert!(restored);
+
+        let after_restore = list(&conn, 10).unwrap();
+        assert_eq!(after_restore.len(), 1);
+    }
+
+    #[test]
+    fn test_crud_movements_update_and_search() {
+        let conn = mem();
+        let id_str = insert(&conn, &Gasto, 5000.0, "ARS", "supermercado", "coto", "2026-10-01", "gaste 5000").unwrap();
+        let uuid = Uuid::parse_str(&id_str).unwrap();
+
+        // Update
+        let updated = update_transaction(
+            &conn,
+            uuid.as_bytes(),
+            "gasto",
+            650000, // 6500.00
+            "ARS",
+            "supermercado",
+            "coto semanal",
+            now_ms(),
+            None,
+        ).unwrap();
+        assert!(updated);
+
+        let all = list(&conn, 10).unwrap();
+        assert_eq!(all[0].monto, 6500.0);
+        assert_eq!(all[0].descripcion, "coto semanal");
+
+        // Search by text
+        let search_res = search_transactions(&conn, Some("semanal"), None, None, None, None, None, 10, 0).unwrap();
+        assert_eq!(search_res.len(), 1);
+        assert_eq!(search_res[0].id, id_str);
+
+        let no_match = search_transactions(&conn, Some("inexistente"), None, None, None, None, None, 10, 0).unwrap();
+        assert_eq!(no_match.len(), 0);
+    }
+
+    #[test]
+    fn test_custom_categories_crud() {
+        let conn = mem();
+        let cat_id = create_category(&conn, "Mascotas", "pets", "#FF9800", None).unwrap();
+        let cat_uuid = Uuid::from_bytes(cat_id);
+
+        let cats = list_categories(&conn).unwrap();
+        let found = cats.iter().find(|c| c.id == cat_uuid.to_string()).unwrap();
+        assert_eq!(found.name, "Mascotas");
+        assert_eq!(found.icon, "pets");
+        assert!(!found.is_system);
+
+        // Update
+        assert!(update_category(&conn, &cat_id, "Veterinaria", "local_hospital", "#E91E63").unwrap());
+        let cats2 = list_categories(&conn).unwrap();
+        let found2 = cats2.iter().find(|c| c.id == cat_uuid.to_string()).unwrap();
+        assert_eq!(found2.name, "Veterinaria");
+        assert_eq!(found2.icon, "local_hospital");
+
+        // Delete
+        assert!(delete_category(&conn, &cat_id).unwrap());
+        let cats3 = list_categories(&conn).unwrap();
+        assert!(cats3.iter().find(|c| c.id == cat_uuid.to_string()).is_none());
+    }
+
+    #[test]
+    fn test_home_summary_and_usage_streak() {
+        let conn = mem();
+        insert(&conn, &Ingreso, 100000.0, "ARS", "sueldo", "sueldo", "2026-10-01", "sueldo").unwrap();
+        insert(&conn, &Gasto, 20000.0, "ARS", "comida", "cena", "2026-10-01", "cena").unwrap();
+
+        let summary = get_home_summary(&conn, "ARS").unwrap();
+        assert_eq!(summary.currency, "ARS");
+        assert_eq!(summary.monthly_income, 100000.0);
+        assert_eq!(summary.monthly_expense, 20000.0);
+
+        let streak = get_usage_streak(&conn).unwrap();
+        assert!(streak.active_today);
+        assert_eq!(streak.current_streak, 1);
+        assert_eq!(streak.max_streak, 1);
     }
 }
 

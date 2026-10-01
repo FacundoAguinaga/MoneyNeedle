@@ -98,6 +98,8 @@ pub struct MovementDto {
     pub categoria: String,
     pub descripcion: String,
     pub fecha: String,
+    pub account_id: Option<String>,
+    pub account_name: Option<String>,
 }
 
 impl From<store::Movement> for MovementDto {
@@ -110,6 +112,8 @@ impl From<store::Movement> for MovementDto {
             categoria: m.categoria,
             descripcion: m.descripcion,
             fecha: m.fecha,
+            account_id: m.account_id,
+            account_name: m.account_name,
         }
     }
 }
@@ -362,6 +366,23 @@ pub fn delete_account(db_path: String, account_id: String) -> anyhow::Result<boo
     store::delete_account(&conn, u.as_bytes()).map_err(|e| anyhow::anyhow!("{e}"))
 }
 
+/// Actualiza una cuenta existente.
+pub fn update_account(
+    db_path: String,
+    account_id: String,
+    name: String,
+    color: String,
+    credit_limit: Option<f64>,
+    closing_day: Option<i32>,
+    due_day: Option<i32>,
+) -> anyhow::Result<bool> {
+    let conn = store::open_default(&db_path).map_err(|e| anyhow::anyhow!("{e}"))?;
+    let u = uuid::Uuid::parse_str(&account_id).map_err(|e| anyhow::anyhow!("{e}"))?;
+    let limit_cents = credit_limit.map(|c| (c * 100.0).round() as i64);
+    store::update_account(&conn, u.as_bytes(), &name, &color, limit_cents, closing_day, due_day)
+        .map_err(|e| anyhow::anyhow!("{e}"))
+}
+
 /// Cuota de resumen de tarjeta.
 #[derive(Debug, Clone)]
 pub struct CardStatementItemDto {
@@ -492,6 +513,21 @@ pub fn delete_recurring_rule(db_path: String, rule_id: String) -> anyhow::Result
     store::delete_recurring_rule(&conn, u.as_bytes()).map_err(|e| anyhow::anyhow!("{e}"))
 }
 
+/// Actualiza una regla recurrente existente.
+pub fn update_recurring_rule(
+    db_path: String,
+    rule_id: String,
+    amount: f64,
+    frequency: String,
+    auto_apply: bool,
+) -> anyhow::Result<bool> {
+    let conn = store::open_default(&db_path).map_err(|e| anyhow::anyhow!("{e}"))?;
+    let u = uuid::Uuid::parse_str(&rule_id).map_err(|e| anyhow::anyhow!("{e}"))?;
+    let amount_cents = (amount * 100.0).round() as i64;
+    store::update_recurring_rule(&conn, u.as_bytes(), amount_cents, &frequency, auto_apply)
+        .map_err(|e| anyhow::anyhow!("{e}"))
+}
+
 /// Procesa las reglas recurrentes vencidas hasta hoy.
 pub fn process_recurring_rules(db_path: String) -> anyhow::Result<i32> {
     let conn = store::open_default(&db_path).map_err(|e| anyhow::anyhow!("{e}"))?;
@@ -544,6 +580,108 @@ pub fn list_movements(db_path: String, limit: i64) -> anyhow::Result<Vec<Movemen
         .into_iter()
         .map(MovementDto::from)
         .collect())
+}
+
+/// Elimina un movimiento de forma suave (soft-delete).
+pub fn delete_movement(db_path: String, movement_id: String) -> anyhow::Result<bool> {
+    let conn = store::open_default(&db_path).map_err(|e| anyhow::anyhow!("{e}"))?;
+    let u = uuid::Uuid::parse_str(&movement_id).map_err(|e| anyhow::anyhow!("{e}"))?;
+    store::soft_delete_transaction(&conn, u.as_bytes()).map_err(|e| anyhow::anyhow!("{e}"))
+}
+
+/// Restaura un movimiento eliminado previamente (Deshacer borrado).
+pub fn restore_movement(db_path: String, movement_id: String) -> anyhow::Result<bool> {
+    let conn = store::open_default(&db_path).map_err(|e| anyhow::anyhow!("{e}"))?;
+    let u = uuid::Uuid::parse_str(&movement_id).map_err(|e| anyhow::anyhow!("{e}"))?;
+    store::restore_transaction(&conn, u.as_bytes()).map_err(|e| anyhow::anyhow!("{e}"))
+}
+
+/// Actualiza los datos de un movimiento confirmado.
+#[allow(clippy::too_many_arguments)]
+pub fn update_movement(
+    db_path: String,
+    movement_id: String,
+    tipo: String,
+    monto: f64,
+    moneda: String,
+    categoria: String,
+    descripcion: String,
+    fecha: String,
+    account_id: Option<String>,
+) -> anyhow::Result<bool> {
+    let conn = store::open_default(&db_path).map_err(|e| anyhow::anyhow!("{e}"))?;
+    let u = uuid::Uuid::parse_str(&movement_id).map_err(|e| anyhow::anyhow!("{e}"))?;
+    let monto_cents = (monto * 100.0).round() as i64;
+    let fecha_ms = store::parse_date_str_to_ms(&fecha).unwrap_or_else(store::now_ms);
+
+    let acc_bytes = match account_id {
+        Some(s) if !s.trim().is_empty() => {
+            let acc_u = uuid::Uuid::parse_str(&s).map_err(|e| anyhow::anyhow!("{e}"))?;
+            Some(*acc_u.as_bytes())
+        }
+        _ => None,
+    };
+
+    store::update_transaction(
+        &conn,
+        u.as_bytes(),
+        &tipo,
+        monto_cents,
+        &moneda,
+        &categoria,
+        &descripcion,
+        fecha_ms,
+        acc_bytes.as_ref(),
+    )
+    .map_err(|e| anyhow::anyhow!("{e}"))
+}
+
+/// Busca y filtra movimientos de forma multicriterio con paginación.
+#[allow(clippy::too_many_arguments)]
+pub fn search_movements(
+    db_path: String,
+    query: Option<String>,
+    start_date_ms: Option<i64>,
+    end_date_ms: Option<i64>,
+    category_id: Option<String>,
+    account_id: Option<String>,
+    tipo: Option<String>,
+    limit: i64,
+    offset: i64,
+) -> anyhow::Result<Vec<MovementDto>> {
+    let conn = store::open_default(&db_path).map_err(|e| anyhow::anyhow!("{e}"))?;
+
+    let cat_bytes = match category_id {
+        Some(s) if !s.trim().is_empty() => {
+            let u = uuid::Uuid::parse_str(&s).map_err(|e| anyhow::anyhow!("{e}"))?;
+            Some(*u.as_bytes())
+        }
+        _ => None,
+    };
+
+    let acc_bytes = match account_id {
+        Some(s) if !s.trim().is_empty() => {
+            let u = uuid::Uuid::parse_str(&s).map_err(|e| anyhow::anyhow!("{e}"))?;
+            Some(*u.as_bytes())
+        }
+        _ => None,
+    };
+
+    Ok(store::search_transactions(
+        &conn,
+        query.as_deref(),
+        start_date_ms,
+        end_date_ms,
+        cat_bytes.as_ref(),
+        acc_bytes.as_ref(),
+        tipo.as_deref(),
+        limit,
+        offset,
+    )
+    .map_err(|e| anyhow::anyhow!("{e}"))?
+    .into_iter()
+    .map(MovementDto::from)
+    .collect())
 }
 
 // ============================================================================
@@ -852,6 +990,7 @@ pub struct CategoryDto {
     pub name: String,
     pub icon: String,
     pub color: String,
+    pub is_system: bool,
 }
 
 /// Lista todas las categorías activas.
@@ -865,8 +1004,107 @@ pub fn list_categories(db_path: String) -> anyhow::Result<Vec<CategoryDto>> {
             name: c.name,
             icon: c.icon,
             color: c.color,
+            is_system: c.is_system,
         })
         .collect())
+}
+
+/// Crea una nueva categoría personalizada.
+pub fn create_category(
+    db_path: String,
+    name: String,
+    icon: String,
+    color: String,
+    parent_id: Option<String>,
+) -> anyhow::Result<String> {
+    let conn = store::open_default(&db_path).map_err(|e| anyhow::anyhow!("{e}"))?;
+    let parent_bytes = match parent_id {
+        Some(s) if !s.trim().is_empty() => {
+            let u = uuid::Uuid::parse_str(&s).map_err(|e| anyhow::anyhow!("{e}"))?;
+            Some(*u.as_bytes())
+        }
+        _ => None,
+    };
+    let id_bytes = store::create_category(&conn, &name, &icon, &color, parent_bytes.as_ref())
+        .map_err(|e| anyhow::anyhow!("{e}"))?;
+    Ok(uuid::Uuid::from_bytes(id_bytes).to_string())
+}
+
+/// Actualiza una categoría existente.
+pub fn update_category(
+    db_path: String,
+    category_id: String,
+    name: String,
+    icon: String,
+    color: String,
+) -> anyhow::Result<bool> {
+    let conn = store::open_default(&db_path).map_err(|e| anyhow::anyhow!("{e}"))?;
+    let u = uuid::Uuid::parse_str(&category_id).map_err(|e| anyhow::anyhow!("{e}"))?;
+    store::update_category(&conn, u.as_bytes(), &name, &icon, &color)
+        .map_err(|e| anyhow::anyhow!("{e}"))
+}
+
+/// Elimina una categoría custom (no del sistema).
+pub fn delete_category(db_path: String, category_id: String) -> anyhow::Result<bool> {
+    let conn = store::open_default(&db_path).map_err(|e| anyhow::anyhow!("{e}"))?;
+    let u = uuid::Uuid::parse_str(&category_id).map_err(|e| anyhow::anyhow!("{e}"))?;
+    store::delete_category(&conn, u.as_bytes()).map_err(|e| anyhow::anyhow!("{e}"))
+}
+
+#[derive(Debug, Clone)]
+pub struct HomeSummaryDto {
+    pub total_balance: f64,
+    pub monthly_expense: f64,
+    pub monthly_income: f64,
+    pub prev_month_expense: f64,
+    pub delta_expense_pct: Option<f64>,
+    pub currency: String,
+}
+
+impl From<store::HomeSummary> for HomeSummaryDto {
+    fn from(s: store::HomeSummary) -> Self {
+        HomeSummaryDto {
+            total_balance: s.total_balance,
+            monthly_expense: s.monthly_expense,
+            monthly_income: s.monthly_income,
+            prev_month_expense: s.prev_month_expense,
+            delta_expense_pct: s.delta_expense_pct,
+            currency: s.currency,
+        }
+    }
+}
+
+/// Devuelve el resumen financiero para el Home Tab.
+pub fn get_home_summary(db_path: String, currency: String) -> anyhow::Result<HomeSummaryDto> {
+    let conn = store::open_default(&db_path).map_err(|e| anyhow::anyhow!("{e}"))?;
+    Ok(store::get_home_summary(&conn, &currency)
+        .map_err(|e| anyhow::anyhow!("{e}"))?
+        .into())
+}
+
+#[derive(Debug, Clone)]
+pub struct StreakDto {
+    pub current_streak: i32,
+    pub max_streak: i32,
+    pub active_today: bool,
+}
+
+impl From<store::UsageStreak> for StreakDto {
+    fn from(s: store::UsageStreak) -> Self {
+        StreakDto {
+            current_streak: s.current_streak,
+            max_streak: s.max_streak,
+            active_today: s.active_today,
+        }
+    }
+}
+
+/// Calcula la racha de días consecutivos de registro de gastos.
+pub fn get_usage_streak(db_path: String) -> anyhow::Result<StreakDto> {
+    let conn = store::open_default(&db_path).map_err(|e| anyhow::anyhow!("{e}"))?;
+    Ok(store::get_usage_streak(&conn)
+        .map_err(|e| anyhow::anyhow!("{e}"))?
+        .into())
 }
 
 // ============================================================================
@@ -1401,5 +1639,97 @@ mod tests {
 
         let _ = std::fs::remove_file(&db_path);
         let _ = std::fs::remove_file(&restore_db);
+    }
+
+    #[test]
+    fn api_crud_flow_test() {
+        let db_path = format!("/tmp/test_api_crud_{}.db", store::now_ms());
+        let _ = std::fs::remove_file(&db_path);
+
+        init_database(db_path.clone(), None).unwrap();
+        let accs = list_accounts(db_path.clone()).unwrap();
+        let acc_id = accs[0].id.clone();
+
+        // 1. Confirmar movimiento
+        let mov_id = confirm_movement(
+            db_path.clone(),
+            "gasto".into(),
+            4500.0,
+            "ARS".into(),
+            "comida".into(),
+            "pizza".into(),
+            "2026-10-01".into(),
+            "pizza 4500".into(),
+            Some(acc_id.clone()),
+        ).unwrap();
+
+        // 2. Buscar movimientos
+        let search_res = search_movements(
+            db_path.clone(),
+            Some("pizza".into()),
+            None,
+            None,
+            None,
+            None,
+            None,
+            10,
+            0,
+        ).unwrap();
+        assert_eq!(search_res.len(), 1);
+        assert_eq!(search_res[0].id, mov_id);
+
+        // 3. Editar movimiento
+        let updated = update_movement(
+            db_path.clone(),
+            mov_id.clone(),
+            "gasto".into(),
+            5000.0,
+            "ARS".into(),
+            "comida".into(),
+            "pizza grande".into(),
+            "2026-10-01".into(),
+            Some(acc_id.clone()),
+        ).unwrap();
+        assert!(updated);
+
+        let list_after_up = list_movements(db_path.clone(), 10).unwrap();
+        assert_eq!(list_after_up[0].monto, 5000.0);
+        assert_eq!(list_after_up[0].descripcion, "pizza grande");
+
+        // 4. Soft-delete y Restore
+        assert!(delete_movement(db_path.clone(), mov_id.clone()).unwrap());
+        assert_eq!(list_movements(db_path.clone(), 10).unwrap().len(), 0);
+
+        assert!(restore_movement(db_path.clone(), mov_id.clone()).unwrap());
+        assert_eq!(list_movements(db_path.clone(), 10).unwrap().len(), 1);
+
+        // 5. Home Summary y Streak
+        let summary = get_home_summary(db_path.clone(), "ARS".into()).unwrap();
+        assert_eq!(summary.monthly_expense, 5000.0);
+
+        let streak = get_usage_streak(db_path.clone()).unwrap();
+        assert_eq!(streak.current_streak, 1);
+
+        // 6. Categorías custom
+        let cat_id = create_category(
+            db_path.clone(),
+            "Suscripciones".into(),
+            "subscriptions".into(),
+            "#9C27B0".into(),
+            None,
+        ).unwrap();
+        assert!(!cat_id.is_empty());
+
+        assert!(update_category(
+            db_path.clone(),
+            cat_id.clone(),
+            "Streaming".into(),
+            "tv".into(),
+            "#673AB7".into(),
+        ).unwrap());
+
+        assert!(delete_category(db_path.clone(), cat_id).unwrap());
+
+        let _ = std::fs::remove_file(&db_path);
     }
 }

@@ -78,6 +78,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   FinancialKpisDto dco_decode_financial_kpis_dto(dynamic raw);
 
   @protected
+  HomeSummaryDto dco_decode_home_summary_dto(dynamic raw);
+
+  @protected
   int dco_decode_i_32(dynamic raw);
 
   @protected
@@ -155,6 +158,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   SavingGoalDto dco_decode_saving_goal_dto(dynamic raw);
 
   @protected
+  StreakDto dco_decode_streak_dto(dynamic raw);
+
+  @protected
   int dco_decode_u_8(dynamic raw);
 
   @protected
@@ -227,6 +233,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   FinancialKpisDto sse_decode_financial_kpis_dto(SseDeserializer deserializer);
+
+  @protected
+  HomeSummaryDto sse_decode_home_summary_dto(SseDeserializer deserializer);
 
   @protected
   int sse_decode_i_32(SseDeserializer deserializer);
@@ -314,6 +323,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   SavingGoalDto sse_decode_saving_goal_dto(SseDeserializer deserializer);
 
   @protected
+  StreakDto sse_decode_streak_dto(SseDeserializer deserializer);
+
+  @protected
   int sse_decode_u_8(SseDeserializer deserializer);
 
   @protected
@@ -393,6 +405,10 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_financial_kpis_dto(
       FinancialKpisDto self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_home_summary_dto(
+      HomeSummaryDto self, SseSerializer serializer);
 
   @protected
   void sse_encode_i_32(int self, SseSerializer serializer);
@@ -484,6 +500,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_saving_goal_dto(SavingGoalDto self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_streak_dto(StreakDto self, SseSerializer serializer);
 
   @protected
   void sse_encode_u_8(int self, SseSerializer serializer);
