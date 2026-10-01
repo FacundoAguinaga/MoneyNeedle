@@ -334,20 +334,36 @@ class _HomeTabState extends State<HomeTab> {
                       itemCount: _movimientos.length,
                       itemBuilder: (c, i) {
                         final m = _movimientos[i];
-                        final isGasto = m.tipo == 'gasto';
-                        return ListTile(
-                          leading: CircleAvatar(
+                        final isTransfer = m.tipo.toLowerCase() == 'transferencia' || m.tipo.toLowerCase() == 'transfer';
+                        final isGasto = m.tipo.toLowerCase() == 'gasto';
+
+                        Widget leadingIcon;
+                        if (isTransfer) {
+                          leadingIcon = CircleAvatar(
+                            backgroundColor: Colors.blue.shade50,
+                            child: Icon(Icons.swap_horiz, color: Colors.blue.shade700),
+                          );
+                        } else {
+                          leadingIcon = CircleAvatar(
                             backgroundColor: isGasto ? Colors.red.shade50 : Colors.green.shade50,
                             child: Icon(
                               isGasto ? Icons.arrow_upward : Icons.arrow_downward,
                               color: isGasto ? Colors.red : Colors.green,
                             ),
-                          ),
+                          );
+                        }
+
+                        return ListTile(
+                          leading: leadingIcon,
                           title: Text(
                             '${m.tipo.toUpperCase()} \$${m.monto.toStringAsFixed(0)} ${m.moneda}',
                             style: const TextStyle(fontWeight: FontWeight.bold),
                           ),
-                          subtitle: Text('${m.categoria} · ${m.fecha}\n${m.descripcion}'),
+                          subtitle: Text(
+                            isTransfer
+                                ? '${m.fecha}\n${m.descripcion}'
+                                : '${m.categoria} · ${m.fecha}\n${m.descripcion}',
+                          ),
                           isThreeLine: m.descripcion.isNotEmpty,
                         );
                       },

@@ -202,6 +202,75 @@ pub fn confirm_credit_purchase(
     Ok(uuid::Uuid::from_bytes(tx_bytes).to_string())
 }
 
+/// DTO con cotización histórica o implícita entre monedas.
+#[derive(Debug, Clone)]
+pub struct ExchangeRateDto {
+    pub base_currency: String,
+    pub quote_currency: String,
+    pub rate: f64,
+    pub timestamp: i64,
+}
+
+impl From<store::ExchangeRateRecord> for ExchangeRateDto {
+    fn from(r: store::ExchangeRateRecord) -> Self {
+        ExchangeRateDto {
+            base_currency: r.base_currency,
+            quote_currency: r.quote_currency,
+            rate: r.rate,
+            timestamp: r.timestamp,
+        }
+    }
+}
+
+/// Registra una transferencia entre cuentas (misma moneda o con cambio de divisa).
+pub fn create_transfer(
+    db_path: String,
+    from_account_id: String,
+    to_account_id: String,
+    from_amount: f64,
+    to_amount: f64,
+    notes: String,
+) -> anyhow::Result<String> {
+    let conn = store::open_default(&db_path).map_err(|e| anyhow::anyhow!("{e}"))?;
+    let from_uuid = uuid::Uuid::parse_str(&from_account_id).map_err(|e| anyhow::anyhow!("{e}"))?;
+    let to_uuid = uuid::Uuid::parse_str(&to_account_id).map_err(|e| anyhow::anyhow!("{e}"))?;
+    let from_cents = (from_amount * 100.0).round() as i64;
+    let to_cents = (to_amount * 100.0).round() as i64;
+    let now = store::now_ms();
+
+    let tx_bytes = store::insert_transfer(
+        &conn,
+        from_uuid.as_bytes(),
+        to_uuid.as_bytes(),
+        from_cents,
+        to_cents,
+        now,
+        &notes,
+    )
+    .map_err(|e| anyhow::anyhow!("{e}"))?;
+
+    Ok(uuid::Uuid::from_bytes(tx_bytes).to_string())
+}
+
+/// Consulta la última cotización registrada entre dos monedas.
+pub fn get_latest_exchange_rate(
+    db_path: String,
+    base_currency: String,
+    quote_currency: String,
+) -> anyhow::Result<Option<ExchangeRateDto>> {
+    let conn = store::open_default(&db_path).map_err(|e| anyhow::anyhow!("{e}"))?;
+    let rate = store::get_latest_exchange_rate(&conn, &base_currency, &quote_currency)
+        .map_err(|e| anyhow::anyhow!("{e}"))?;
+    Ok(rate.map(ExchangeRateDto::from))
+}
+
+/// Lista el historial de cotizaciones registradas.
+pub fn list_exchange_rates(db_path: String) -> anyhow::Result<Vec<ExchangeRateDto>> {
+    let conn = store::open_default(&db_path).map_err(|e| anyhow::anyhow!("{e}"))?;
+    let rates = store::list_exchange_rates(&conn).map_err(|e| anyhow::anyhow!("{e}"))?;
+    Ok(rates.into_iter().map(ExchangeRateDto::from).collect())
+}
+
 /// DTO para cuentas y saldos en UI.
 #[derive(Debug, Clone)]
 pub struct AccountDto {
@@ -615,6 +684,82 @@ mod tests {
         lock_database(db_path.clone()).unwrap();
         let res = list_accounts(db_path.clone());
         assert!(res.is_err(), "Sin la clave de sesión, la base cifrada debe rechazar la apertura");
+
+        let _ = std::fs::remove_file(&db_path);
+    }
+
+    #[test]
+    fn api_transferencias_y_cotizaciones_test() {
+        let db_path = format!("/tmp/test_api_transfer_{}.db", store::now_ms());
+        let _ = std::fs::remove_file(&db_path);
+
+        init_database(db_path.clone(), None).unwrap();
+
+        // 1. Crear cuenta origen en ARS y destino en USD
+        let ars_id = create_account(
+            db_path.clone(),
+            "Galicia ARS".into(),
+            "bank".into(),
+            "ARS".into(),
+            2_000_000.0,
+            None,
+            None,
+            None,
+            "#FF9800".into(),
+            "bank".into(),
+        )
+        .unwrap();
+
+        let usd_id = create_account(
+            db_path.clone(),
+            "Galicia USD".into(),
+            "bank".into(),
+            "USD".into(),
+            100.0,
+            None,
+            None,
+            None,
+            "#4CAF50".into(),
+            "bank".into(),
+        )
+        .unwrap();
+
+        // 2. Transferencia bimonetaria: compra de 1.000 USD con 1.200.000 ARS (cotización 1 USD = 1200 ARS)
+        let tx_id = create_transfer(
+            db_path.clone(),
+            ars_id.clone(),
+            usd_id.clone(),
+            1_200_000.0,
+            1_000.0,
+            "Compra dólar MEP".into(),
+        )
+        .unwrap();
+        assert!(!tx_id.is_empty());
+
+        // 3. Verificar saldos actualizados
+        let accs = list_accounts(db_path.clone()).unwrap();
+        let ars_acc = accs.iter().find(|a| a.id == ars_id).unwrap();
+        let usd_acc = accs.iter().find(|a| a.id == usd_id).unwrap();
+
+        assert_eq!(ars_acc.current_balance, 800_000.0);
+        assert_eq!(usd_acc.current_balance, 1_100.0);
+
+        // 4. Verificar cotización implícita guardada
+        let rate_opt = get_latest_exchange_rate(db_path.clone(), "ARS".into(), "USD".into()).unwrap();
+        assert!(rate_opt.is_some());
+        let r = rate_opt.unwrap();
+        assert_eq!(r.base_currency, "ARS");
+        assert_eq!(r.quote_currency, "USD");
+        // rate = 1000 / 1200000 = 0.0008333333333333334
+        assert!((r.rate - (1_000.0 / 1_200_000.0)).abs() < 1e-6);
+
+        // 5. Verificar lista de cotizaciones
+        let all_rates = list_exchange_rates(db_path.clone()).unwrap();
+        assert_eq!(all_rates.len(), 1);
+
+        // 6. Verificar que la lista de movimientos muestra la transferencia
+        let movs = list_movements(db_path.clone(), 10).unwrap();
+        assert!(movs.iter().any(|m| m.tipo == "transferencia" && m.monto == 1_200_000.0));
 
         let _ = std::fs::remove_file(&db_path);
     }

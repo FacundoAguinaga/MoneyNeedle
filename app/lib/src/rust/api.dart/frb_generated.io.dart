@@ -31,6 +31,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   bool dco_decode_bool(dynamic raw);
 
   @protected
+  ExchangeRateDto dco_decode_box_autoadd_exchange_rate_dto(dynamic raw);
+
+  @protected
   double dco_decode_box_autoadd_f_64(dynamic raw);
 
   @protected
@@ -41,6 +44,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   CardStatementItemDto dco_decode_card_statement_item_dto(dynamic raw);
+
+  @protected
+  ExchangeRateDto dco_decode_exchange_rate_dto(dynamic raw);
 
   @protected
   double dco_decode_f_64(dynamic raw);
@@ -59,6 +65,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
       dynamic raw);
 
   @protected
+  List<ExchangeRateDto> dco_decode_list_exchange_rate_dto(dynamic raw);
+
+  @protected
   List<MovementDto> dco_decode_list_movement_dto(dynamic raw);
 
   @protected
@@ -72,6 +81,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   String? dco_decode_opt_String(dynamic raw);
+
+  @protected
+  ExchangeRateDto? dco_decode_opt_box_autoadd_exchange_rate_dto(dynamic raw);
 
   @protected
   double? dco_decode_opt_box_autoadd_f_64(dynamic raw);
@@ -107,6 +119,10 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   bool sse_decode_bool(SseDeserializer deserializer);
 
   @protected
+  ExchangeRateDto sse_decode_box_autoadd_exchange_rate_dto(
+      SseDeserializer deserializer);
+
+  @protected
   double sse_decode_box_autoadd_f_64(SseDeserializer deserializer);
 
   @protected
@@ -118,6 +134,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   CardStatementItemDto sse_decode_card_statement_item_dto(
       SseDeserializer deserializer);
+
+  @protected
+  ExchangeRateDto sse_decode_exchange_rate_dto(SseDeserializer deserializer);
 
   @protected
   double sse_decode_f_64(SseDeserializer deserializer);
@@ -136,6 +155,10 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
       SseDeserializer deserializer);
 
   @protected
+  List<ExchangeRateDto> sse_decode_list_exchange_rate_dto(
+      SseDeserializer deserializer);
+
+  @protected
   List<MovementDto> sse_decode_list_movement_dto(SseDeserializer deserializer);
 
   @protected
@@ -150,6 +173,10 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   String? sse_decode_opt_String(SseDeserializer deserializer);
+
+  @protected
+  ExchangeRateDto? sse_decode_opt_box_autoadd_exchange_rate_dto(
+      SseDeserializer deserializer);
 
   @protected
   double? sse_decode_opt_box_autoadd_f_64(SseDeserializer deserializer);
@@ -186,6 +213,10 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_encode_bool(bool self, SseSerializer serializer);
 
   @protected
+  void sse_encode_box_autoadd_exchange_rate_dto(
+      ExchangeRateDto self, SseSerializer serializer);
+
+  @protected
   void sse_encode_box_autoadd_f_64(double self, SseSerializer serializer);
 
   @protected
@@ -198,6 +229,10 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_card_statement_item_dto(
       CardStatementItemDto self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_exchange_rate_dto(
+      ExchangeRateDto self, SseSerializer serializer);
 
   @protected
   void sse_encode_f_64(double self, SseSerializer serializer);
@@ -217,6 +252,10 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
       List<CardStatementItemDto> self, SseSerializer serializer);
 
   @protected
+  void sse_encode_list_exchange_rate_dto(
+      List<ExchangeRateDto> self, SseSerializer serializer);
+
+  @protected
   void sse_encode_list_movement_dto(
       List<MovementDto> self, SseSerializer serializer);
 
@@ -233,6 +272,10 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_opt_String(String? self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_opt_box_autoadd_exchange_rate_dto(
+      ExchangeRateDto? self, SseSerializer serializer);
 
   @protected
   void sse_encode_opt_box_autoadd_f_64(double? self, SseSerializer serializer);
