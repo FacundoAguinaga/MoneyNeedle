@@ -19,6 +19,24 @@ class MainActivity : FlutterFragmentActivity() {
     private var pending: MethodChannel.Result? = null
     private var triedOnlineFallback = false
 
+    private var widgetChannel: MethodChannel? = null
+    private var launchQuickAdd = false
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        if (intent?.action == "com.moneyneedle.ACTION_QUICK_ADD" || intent?.getBooleanExtra("quick_add", false) == true) {
+            launchQuickAdd = true
+        }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        if (intent.action == "com.moneyneedle.ACTION_QUICK_ADD" || intent.getBooleanExtra("quick_add", false) == true) {
+            widgetChannel?.invokeMethod("onQuickAddTriggered", null)
+        }
+    }
+
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, channel)
@@ -30,6 +48,19 @@ class MainActivity : FlutterFragmentActivity() {
                     else -> result.notImplemented()
                 }
             }
+
+        widgetChannel = MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "moneyneedle/widget").apply {
+            setMethodCallHandler { call, result ->
+                when (call.method) {
+                    "checkQuickAdd" -> {
+                        val triggered = launchQuickAdd
+                        launchQuickAdd = false
+                        result.success(triggered)
+                    }
+                    else -> result.notImplemented()
+                }
+            }
+        }
     }
 
     private fun startListening(result: MethodChannel.Result) {

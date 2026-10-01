@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../rust/api.dart/api.dart';
 import 'mn_amount_text.dart';
 import 'mn_empty_state.dart';
@@ -132,9 +133,27 @@ class GroupedMovementList extends StatelessWidget {
                 ),
                 itemBuilder: (context, itemIndex) {
                   final mov = dayMovements[itemIndex];
-                  return MovementListItem(
+                  final itemWidget = MovementListItem(
                     movement: mov,
                     onTap: onItemTap != null ? () => onItemTap!(mov) : null,
+                  );
+
+                  if (onItemDismissed == null) return itemWidget;
+
+                  return Dismissible(
+                    key: ValueKey('movement_${mov.id}'),
+                    direction: DismissDirection.endToStart,
+                    background: Container(
+                      alignment: Alignment.centerRight,
+                      padding: const EdgeInsets.only(right: 20),
+                      color: Theme.of(context).colorScheme.error,
+                      child: const Icon(Icons.delete_outline, color: Colors.white),
+                    ),
+                    onDismissed: (_) {
+                      HapticFeedback.heavyImpact();
+                      onItemDismissed!(mov);
+                    },
+                    child: itemWidget,
                   );
                 },
               ),

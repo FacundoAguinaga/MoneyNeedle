@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../auth/vault_service.dart';
 import '../rust/api.dart/api.dart';
 import '../widgets/widgets.dart';
@@ -12,11 +13,13 @@ class PendingProposal {
 class HomeTab extends StatefulWidget {
   const HomeTab({super.key});
 
+  static final GlobalKey<HomeTabState> homeTabKey = GlobalKey<HomeTabState>();
+
   @override
-  State<HomeTab> createState() => _HomeTabState();
+  State<HomeTab> createState() => HomeTabState();
 }
 
-class _HomeTabState extends State<HomeTab> {
+class HomeTabState extends State<HomeTab> {
   HomeSummaryDto? _summary;
   StreakDto? _streak;
   List<MovementDto> _movimientos = [];
@@ -25,6 +28,10 @@ class _HomeTabState extends State<HomeTab> {
   PendingProposal? _pending;
   bool _loading = true;
   bool _confirmando = false;
+
+  void abrirQuickAdd() {
+    _abrirQuickAdd();
+  }
 
   @override
   void initState() {
@@ -64,6 +71,7 @@ class _HomeTabState extends State<HomeTab> {
   }
 
   void _abrirQuickAdd() {
+    HapticFeedback.selectionClick();
     QuickAddModal.show(
       context: context,
       onProposalGenerated: (query, proposal) {
@@ -72,6 +80,45 @@ class _HomeTabState extends State<HomeTab> {
         });
       },
     );
+  }
+
+  Future<void> _eliminarMovimiento(MovementDto mov) async {
+    try {
+      final dbPath = await VaultService.getDbPath();
+      await deleteMovement(dbPath: dbPath, movementId: mov.id);
+      await _recargar();
+      if (!mounted) return;
+
+      final label = mov.descripcion.isNotEmpty ? mov.descripcion : mov.categoria;
+      ScaffoldMessenger.of(context).clearSnackBars();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Movimiento "$label" eliminado'),
+          action: SnackBarAction(
+            label: 'Deshacer',
+            onPressed: () async {
+              try {
+                await restoreMovement(dbPath: dbPath, movementId: mov.id);
+                await _recargar();
+              } catch (e) {
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Error al restaurar: $e')),
+                  );
+                }
+              }
+            },
+          ),
+        ),
+      );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error al eliminar: $e')),
+        );
+        _recargar();
+      }
+    }
   }
 
   Future<void> _confirmarPropuesta({
@@ -118,6 +165,7 @@ class _HomeTabState extends State<HomeTab> {
         );
       }
 
+      HapticFeedback.mediumImpact();
       if (!mounted) return;
       setState(() {
         _pending = null;
@@ -333,6 +381,7 @@ class _HomeTabState extends State<HomeTab> {
               child: GroupedMovementList(
                 movements: _movimientos,
                 onEmptyAction: _abrirQuickAdd,
+                onItemDismissed: _eliminarMovimiento,
               ),
             ),
           ],
