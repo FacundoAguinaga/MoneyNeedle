@@ -6,6 +6,7 @@ import 'package:share_plus/share_plus.dart';
 
 import '../auth/vault_service.dart';
 import '../rust/api.dart/api.dart';
+import '../services/notification_service.dart';
 
 class SettingsScreen extends StatefulWidget {
   final VoidCallback? onDataRestored;
@@ -20,6 +21,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   String? _dbPath;
   bool _loading = false;
   bool _hasBiometrics = false;
+  bool _reminderEnabled = false;
 
   @override
   void initState() {
@@ -30,10 +32,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Future<void> _initPath() async {
     final path = await VaultService.getDbPath();
     final bioKey = await VaultService.readMasterKeyBiometric();
+    final reminder = await NotificationService.instance.isReminderEnabled();
     if (mounted) {
       setState(() {
         _dbPath = path;
         _hasBiometrics = bioKey != null;
+        _reminderEnabled = reminder;
       });
     }
   }
@@ -539,6 +543,27 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       onTap: _loading ? null : _seleccionarYRestaurarBackup,
                     ),
                   ],
+                ),
+              ),
+
+              // Sección: Notificaciones y Hábitos
+              _buildSectionHeader('Notificaciones y Hábitos'),
+              Card(
+                elevation: 0,
+                color: theme.colorScheme.surfaceContainerHighest,
+                margin: const EdgeInsets.only(bottom: 16),
+                child: SwitchListTile(
+                  secondary: const Icon(Icons.notifications_active_outlined, color: Colors.teal),
+                  title: const Text('Recordatorio nocturno (21:00 hs)'),
+                  subtitle: const Text(
+                    'Te recuerda anotar tus gastos diarios para mantener la racha activa',
+                    style: TextStyle(fontSize: 12),
+                  ),
+                  value: _reminderEnabled,
+                  onChanged: (val) async {
+                    setState(() => _reminderEnabled = val);
+                    await NotificationService.instance.setReminderEnabled(val);
+                  },
                 ),
               ),
 

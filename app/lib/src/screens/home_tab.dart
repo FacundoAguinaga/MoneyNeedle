@@ -13,11 +13,13 @@ class PendingProposal {
 class HomeTab extends StatefulWidget {
   const HomeTab({super.key});
 
+  static final GlobalKey<HomeTabState> homeTabKey = GlobalKey<HomeTabState>();
+
   @override
-  State<HomeTab> createState() => _HomeTabState();
+  State<HomeTab> createState() => HomeTabState();
 }
 
-class _HomeTabState extends State<HomeTab> {
+class HomeTabState extends State<HomeTab> {
   HomeSummaryDto? _summary;
   StreakDto? _streak;
   List<MovementDto> _movimientos = [];
@@ -26,6 +28,10 @@ class _HomeTabState extends State<HomeTab> {
   PendingProposal? _pending;
   bool _loading = true;
   bool _confirmando = false;
+
+  void abrirQuickAdd() {
+    _abrirQuickAdd();
+  }
 
   @override
   void initState() {

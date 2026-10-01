@@ -12,6 +12,7 @@ import 'src/screens/recurring_tab.dart';
 import 'src/screens/metrics_tab.dart';
 import 'src/screens/search_screen.dart';
 import 'src/screens/settings_screen.dart';
+import 'src/services/widget_service.dart';
 import 'src/theme/mn_theme.dart';
 
 Future<void> main() async {
@@ -112,12 +113,32 @@ class _HomePageState extends State<HomePage> {
   int _currentTabIndex = 0;
   Key _tabsKey = UniqueKey();
 
-  final List<Widget> _tabs = const [
-    HomeTab(),
-    AccountsTab(),
-    RecurringTab(),
-    MetricsTab(),
+  late final List<Widget> _tabs = [
+    HomeTab(key: HomeTab.homeTabKey),
+    const AccountsTab(),
+    const RecurringTab(),
+    const MetricsTab(),
   ];
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetService.init(onQuickAdd: _onWidgetQuickAdd);
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      final shouldOpen = await WidgetService.checkInitialQuickAdd();
+      if (shouldOpen && mounted) {
+        _onWidgetQuickAdd();
+      }
+    });
+  }
+
+  void _onWidgetQuickAdd() {
+    if (!mounted) return;
+    setState(() => _currentTabIndex = 0);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      HomeTab.homeTabKey.currentState?.abrirQuickAdd();
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
