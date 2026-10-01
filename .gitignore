@@ -7,6 +7,7 @@ app/.dart_tool/
 app/.flutter-plugins
 app/.flutter-plugins-dependencies
 app/build/
+app/android/build/
 app/.pub-cache/
 
 # Python
