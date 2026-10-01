@@ -1,3 +1,4 @@
+export 'grouped_movement_list.dart';
 export 'mn_amount_text.dart';
 export 'mn_card.dart';
 export 'mn_category_icon.dart';
@@ -6,3 +7,6 @@ export 'mn_empty_state.dart';
 export 'mn_kpi_card.dart';
 export 'mn_modal_sheet.dart';
 export 'mn_section_header.dart';
+export 'movement_list_item.dart';
+export 'nlp_proposal_card.dart';
+export 'quick_add_modal.dart';
