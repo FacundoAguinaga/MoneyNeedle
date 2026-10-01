@@ -869,6 +869,78 @@ pub fn list_categories(db_path: String) -> anyhow::Result<Vec<CategoryDto>> {
         .collect())
 }
 
+// ============================================================================
+// Exportación de Datos y Backups Cifrados (Fase 6)
+// ============================================================================
+
+#[derive(Debug, Clone, Default)]
+pub struct BackupRestoreSummaryDto {
+    pub accounts: usize,
+    pub categories: usize,
+    pub transactions: usize,
+    pub installments: usize,
+    pub recurring_rules: usize,
+    pub exchange_rates: usize,
+    pub budgets: usize,
+    pub saving_goals: usize,
+}
+
+impl From<crate::backup::BackupRestoreSummary> for BackupRestoreSummaryDto {
+    fn from(s: crate::backup::BackupRestoreSummary) -> Self {
+        Self {
+            accounts: s.accounts,
+            categories: s.categories,
+            transactions: s.transactions,
+            installments: s.installments,
+            recurring_rules: s.recurring_rules,
+            exchange_rates: s.exchange_rates,
+            budgets: s.budgets,
+            saving_goals: s.saving_goals,
+        }
+    }
+}
+
+/// Exporta las transacciones a formato CSV estándar RFC 4180.
+pub fn export_transactions_csv(db_path: String) -> anyhow::Result<String> {
+    let conn = store::open_default(&db_path).map_err(|e| anyhow::anyhow!("{e}"))?;
+    crate::backup::export_transactions_csv(&conn).map_err(|e| anyhow::anyhow!("{e}"))
+}
+
+/// Exporta todas las tablas relacionales en un JSON plano legible.
+pub fn export_all_data_json(db_path: String) -> anyhow::Result<String> {
+    let conn = store::open_default(&db_path).map_err(|e| anyhow::anyhow!("{e}"))?;
+    crate::backup::export_all_data_json(&conn).map_err(|e| anyhow::anyhow!("{e}"))
+}
+
+/// Exporta movimientos para reentrenamiento de Needle 3 (formato make_dataset.py).
+pub fn export_corrections_for_training(db_path: String) -> anyhow::Result<String> {
+    let conn = store::open_default(&db_path).map_err(|e| anyhow::anyhow!("{e}"))?;
+    store::export_corrections_jsonl(&conn, TOOLS).map_err(|e| anyhow::anyhow!("{e}"))
+}
+
+/// Genera una copia de seguridad cifrada (.mnbackup) con la contraseña o frase provista.
+pub fn create_encrypted_backup(db_path: String, passphrase: String) -> anyhow::Result<Vec<u8>> {
+    let conn = store::open_default(&db_path).map_err(|e| anyhow::anyhow!("{e}"))?;
+    crate::backup::create_encrypted_backup(&conn, &passphrase).map_err(|e| anyhow::anyhow!("{e}"))
+}
+
+/// Restaura una copia de seguridad cifrada (.mnbackup) en la base de datos viva.
+/// Realiza un respaldo físico previo en disco antes de aplicar los cambios en una transacción atómica.
+pub fn restore_encrypted_backup(
+    db_path: String,
+    backup_bytes: Vec<u8>,
+    passphrase: String,
+) -> anyhow::Result<BackupRestoreSummaryDto> {
+    // Zero-Loss: Copia de seguridad física previa antes de restaurar
+    if db_path != ":memory:" && !db_path.is_empty() {
+        let _ = crate::migrations::backup_database_file(&db_path);
+    }
+    let mut conn = store::open_default(&db_path).map_err(|e| anyhow::anyhow!("{e}"))?;
+    let summary = crate::backup::restore_encrypted_backup(&mut conn, &backup_bytes, &passphrase)
+        .map_err(|e| anyhow::anyhow!("{e}"))?;
+    Ok(BackupRestoreSummaryDto::from(summary))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1274,5 +1346,60 @@ mod tests {
         assert_eq!(list_budgets_status(db_path.clone(), start_ms, end_ms, "ARS".into()).unwrap().len(), 0);
 
         let _ = std::fs::remove_file(&db_path);
+    }
+
+    #[test]
+    fn api_export_and_backup_flow_test() {
+        let db_path = format!("/tmp/test_api_backup_{}.db", store::now_ms());
+        let _ = std::fs::remove_file(&db_path);
+
+        init_database(db_path.clone(), None).unwrap();
+        let accs = list_accounts(db_path.clone()).unwrap();
+        let acc_id = accs[0].id.clone();
+
+        confirm_movement(
+            db_path.clone(),
+            "gasto".into(),
+            7500.0,
+            "ARS".into(),
+            "supermercado".into(),
+            "Supermercado día".into(),
+            "2026-10-01".into(),
+            "gasté 7500 en super".into(),
+            Some(acc_id),
+        ).unwrap();
+
+        // 1. Probar CSV
+        let csv = export_transactions_csv(db_path.clone()).unwrap();
+        assert!(csv.contains("7500.00"));
+        assert!(csv.contains("supermercado"));
+
+        // 2. Probar JSON
+        let json = export_all_data_json(db_path.clone()).unwrap();
+        assert!(json.contains("\"MoneyNeedle\""));
+
+        // 3. Probar JSONL para training
+        let jsonl = export_corrections_for_training(db_path.clone()).unwrap();
+        assert!(jsonl.contains("add_transaction"));
+        assert!(jsonl.contains("supermercado"));
+
+        // 4. Probar Backup cifrado y restauración
+        let pass = "test-secret-phrase";
+        let backup_bytes = create_encrypted_backup(db_path.clone(), pass.into()).unwrap();
+        assert!(backup_bytes.len() > 50);
+
+        let restore_db = format!("/tmp/test_api_restore_{}.db", store::now_ms());
+        let _ = std::fs::remove_file(&restore_db);
+        init_database(restore_db.clone(), None).unwrap();
+
+        let summary = restore_encrypted_backup(restore_db.clone(), backup_bytes, pass.into()).unwrap();
+        assert!(summary.transactions >= 1);
+
+        let movs = list_movements(restore_db.clone(), 10).unwrap();
+        assert_eq!(movs.len(), 1);
+        assert_eq!(movs[0].monto, 7500.0);
+
+        let _ = std::fs::remove_file(&db_path);
+        let _ = std::fs::remove_file(&restore_db);
     }
 }

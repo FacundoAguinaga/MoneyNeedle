@@ -8,6 +8,8 @@ import 'src/screens/home_tab.dart';
 import 'src/screens/recurring_tab.dart';
 import 'src/screens/metrics_tab.dart';
 
+import 'src/screens/settings_screen.dart';
+
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await RustLib.init();
@@ -95,6 +97,7 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   int _currentTabIndex = 0;
+  Key _tabsKey = UniqueKey();
 
   final List<Widget> _tabs = const [
     HomeTab(),
@@ -116,8 +119,29 @@ class _HomePageState extends State<HomePage> {
       appBar: AppBar(
         title: Text(titles[_currentTabIndex]),
         elevation: 0,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.settings_outlined),
+            tooltip: 'Ajustes y Respaldos',
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => SettingsScreen(
+                    onDataRestored: () {
+                      setState(() {
+                        _tabsKey = UniqueKey();
+                      });
+                    },
+                  ),
+                ),
+              );
+            },
+          ),
+        ],
       ),
       body: IndexedStack(
+        key: _tabsKey,
         index: _currentTabIndex,
         children: _tabs,
       ),
