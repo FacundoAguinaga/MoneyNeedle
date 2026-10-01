@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'src/auth/onboarding_vault_screen.dart';
 import 'src/auth/unlock_screen.dart';
 import 'src/auth/vault_service.dart';
+import 'src/auth/welcome_screen.dart';
 import 'src/rust/api.dart/frb_generated.dart';
 import 'src/screens/accounts_tab.dart';
 import 'src/screens/home_tab.dart';
@@ -44,6 +45,7 @@ class _RootGateState extends State<RootGate> {
   bool _loading = true;
   bool _hasVault = false;
   bool _unlocked = false;
+  bool _seenWelcome = false;
 
   @override
   void initState() {
@@ -69,6 +71,12 @@ class _RootGateState extends State<RootGate> {
     }
 
     if (!_hasVault) {
+      if (!_seenWelcome) {
+        return WelcomeScreen(
+          onStart: () => setState(() => _seenWelcome = true),
+        );
+      }
+
       return OnboardingVaultScreen(
         onVaultReady: () {
           setState(() {

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../rust/api.dart/api.dart';
+import '../widgets/widgets.dart';
 import 'vault_service.dart';
 
 class OnboardingVaultScreen extends StatefulWidget {
@@ -40,7 +41,7 @@ class _OnboardingVaultScreenState extends State<OnboardingVaultScreen> {
     } catch (e) {
       if (!mounted) return;
       setState(() {
-        _error = 'Error generando bóveda segura: $e';
+        _error = 'Error preparando seguridad: $e';
         _loading = false;
       });
     }
@@ -56,13 +57,30 @@ class _OnboardingVaultScreenState extends State<OnboardingVaultScreen> {
       await VaultService.saveMasterKeyBiometric(v.rawMasterKeyHex);
       await VaultService.unlockAndInitDb(v.rawMasterKeyHex);
 
+      // Crear cuenta default "Billetera" si no existen cuentas aún
+      try {
+        final dbPath = await VaultService.getDbPath();
+        final existing = await listAccounts(dbPath: dbPath);
+        if (existing.isEmpty) {
+          await createAccount(
+            dbPath: dbPath,
+            name: 'Billetera',
+            accountType: 'wallet',
+            currency: 'ARS',
+            initialBalance: 0.0,
+            color: '#00695C',
+            icon: 'account_balance_wallet',
+          );
+        }
+      } catch (_) {}
+
       if (!mounted) return;
       widget.onVaultReady();
     } catch (e) {
       if (!mounted) return;
       setState(() => _saving = false);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error al configurar biometría: $e')),
+        SnackBar(content: Text('Error al configurar acceso seguro: $e')),
       );
     }
   }
@@ -71,12 +89,17 @@ class _OnboardingVaultScreenState extends State<OnboardingVaultScreen> {
     if (_vault == null) return;
     Clipboard.setData(ClipboardData(text: _vault!.recoveryPhrase));
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Frase de recuperación copiada al portapapeles')),
+      const SnackBar(
+        content: Text('Frase de respaldo copiada al portapapeles'),
+      ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
     if (_loading) {
       return const Scaffold(
         body: Center(
@@ -85,7 +108,7 @@ class _OnboardingVaultScreenState extends State<OnboardingVaultScreen> {
             children: [
               CircularProgressIndicator(),
               SizedBox(height: 16),
-              Text('Generando bóveda criptográfica...'),
+              Text('Preparando tu espacio seguro...'),
             ],
           ),
         ),
@@ -95,16 +118,21 @@ class _OnboardingVaultScreenState extends State<OnboardingVaultScreen> {
     if (_error != null) {
       return Scaffold(
         body: Center(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(_error!, style: const TextStyle(color: Colors.red)),
-              const SizedBox(height: 16),
-              FilledButton(
-                onPressed: _generarVault,
-                child: const Text('Reintentar'),
-              ),
-            ],
+          child: Padding(
+            padding: const EdgeInsets.all(24.0),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.error_outline, size: 48, color: Colors.red),
+                const SizedBox(height: 16),
+                Text(_error!, textAlign: TextAlign.center),
+                const SizedBox(height: 16),
+                FilledButton(
+                  onPressed: _generarVault,
+                  child: const Text('Reintentar'),
+                ),
+              ],
+            ),
           ),
         ),
       );
@@ -113,86 +141,126 @@ class _OnboardingVaultScreenState extends State<OnboardingVaultScreen> {
     final palabras = _vault!.recoveryPhrase.split(' ');
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Bóveda Cifrada')),
+      appBar: AppBar(
+        title: const Text('Protección y Respaldo'),
+        elevation: 0,
+      ),
       body: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.all(16.0),
+          padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 12.0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const Text(
-                'Tu frase de recuperación',
-                style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+              Text(
+                'Tu frase de respaldo',
+                style: theme.textTheme.headlineSmall?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
               ),
               const SizedBox(height: 8),
-              const Text(
-                'Anotá estas 12 palabras en un lugar seguro. Si cambiás de teléfono o se alteran tus datos biométricos, es la única manera de recuperar tus datos.',
-                style: TextStyle(color: Colors.black87, fontSize: 14),
+              Text(
+                'Si alguna vez cambiás de teléfono, estas 12 palabras te permiten recuperar todo tu historial financiero. Guardalas en un lugar seguro.',
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: colorScheme.onSurfaceVariant,
+                  height: 1.4,
+                ),
               ),
               const SizedBox(height: 16),
+
+              // Grilla estilizada de 12 palabras
               Expanded(
-                child: Container(
+                child: MnCard(
                   padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: Colors.grey.shade100,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: Colors.grey.shade300),
-                  ),
+                  backgroundColor: colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
                   child: GridView.builder(
                     gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                       crossAxisCount: 3,
-                      childAspectRatio: 2.4,
+                      childAspectRatio: 2.3,
                       crossAxisSpacing: 8,
                       mainAxisSpacing: 8,
                     ),
                     itemCount: palabras.length,
                     itemBuilder: (context, index) {
                       return Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
                         decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: Colors.grey.shade300),
+                          color: colorScheme.surface,
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(
+                            color: colorScheme.outlineVariant.withValues(alpha: 0.6),
+                          ),
                         ),
-                        alignment: Alignment.center,
-                        child: Text(
-                          '${index + 1}. ${palabras[index]}',
-                          style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+                        child: Row(
+                          children: [
+                            Text(
+                              '${index + 1}',
+                              style: theme.textTheme.labelSmall?.copyWith(
+                                color: colorScheme.primary,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            const SizedBox(width: 6),
+                            Expanded(
+                              child: Text(
+                                palabras[index],
+                                style: theme.textTheme.bodySmall?.copyWith(
+                                  fontWeight: FontWeight.w600,
+                                ),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ],
                         ),
                       );
                     },
                   ),
                 ),
               ),
+              const SizedBox(height: 8),
+
+              // Botón copiar
               Align(
                 alignment: Alignment.centerRight,
                 child: TextButton.icon(
                   onPressed: _copiarFrase,
-                  icon: const Icon(Icons.copy, size: 18),
-                  label: const Text('Copiar'),
+                  icon: const Icon(Icons.copy_outlined, size: 18),
+                  label: const Text('Copiar palabras'),
                 ),
               ),
+
+              // Checkbox de confirmación
               CheckboxListTile(
                 value: _confirmed,
                 onChanged: (val) => setState(() => _confirmed = val ?? false),
                 title: const Text(
-                  'Guardé mi frase de 12 palabras en un lugar seguro',
-                  style: TextStyle(fontSize: 14),
+                  'Anoté o guardé mis 12 palabras de respaldo',
+                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
                 ),
                 controlAffinity: ListTileControlAffinity.leading,
                 contentPadding: EdgeInsets.zero,
               ),
-              const SizedBox(height: 8),
-              FilledButton.icon(
-                onPressed: (_confirmed && !_saving) ? _activarYContinuar : null,
-                icon: _saving
-                    ? const SizedBox(
-                        width: 18,
-                        height: 18,
-                        child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                      )
-                    : const Icon(Icons.fingerprint),
-                label: Text(_saving ? 'Configurando...' : 'Activar Biometría y Empezar'),
+              const SizedBox(height: 12),
+
+              // Botón de activación
+              SizedBox(
+                height: 52,
+                child: FilledButton.icon(
+                  onPressed: (_confirmed && !_saving) ? _activarYContinuar : null,
+                  icon: _saving
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
+                      : const Icon(Icons.fingerprint),
+                  label: Text(
+                    _saving ? 'Configurando acceso...' : 'Activar seguridad y comenzar',
+                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  ),
+                ),
               ),
             ],
           ),
