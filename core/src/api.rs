@@ -546,6 +546,152 @@ pub fn list_movements(db_path: String, limit: i64) -> anyhow::Result<Vec<Movemen
         .collect())
 }
 
+// ============================================================================
+// Métricas, Analítica y Reportes (Fase 4)
+// ============================================================================
+
+#[derive(Debug, Clone)]
+pub struct CategorySpendingDto {
+    pub category_id: Option<String>,
+    pub name: String,
+    pub color: String,
+    pub icon: String,
+    pub total_amount: f64,
+    pub percentage: f64,
+    pub transaction_count: i32,
+}
+
+#[derive(Debug, Clone)]
+pub struct CategoryReportDto {
+    pub currency: String,
+    pub total_amount: f64,
+    pub items: Vec<CategorySpendingDto>,
+}
+
+#[derive(Debug, Clone)]
+pub struct CashflowItemDto {
+    pub year: i32,
+    pub month: i32,
+    pub income_amount: f64,
+    pub expense_amount: f64,
+    pub net_amount: f64,
+    pub currency: String,
+}
+
+#[derive(Debug, Clone)]
+pub struct InstallmentProjectionDto {
+    pub cycle_year: i32,
+    pub cycle_month: i32,
+    pub total_amount: f64,
+    pub count: i32,
+    pub currency: String,
+}
+
+#[derive(Debug, Clone)]
+pub struct FinancialKpisDto {
+    pub total_income: f64,
+    pub total_expense: f64,
+    pub net_savings: f64,
+    pub savings_rate: f64,
+    pub top_category_name: Option<String>,
+    pub top_category_amount: Option<f64>,
+}
+
+/// Reporte de gastos por categoría en un rango de fechas.
+pub fn get_category_spending_report(
+    db_path: String,
+    start_date_ms: i64,
+    end_date_ms: i64,
+    currency: String,
+) -> anyhow::Result<CategoryReportDto> {
+    let conn = store::open_default(&db_path).map_err(|e| anyhow::anyhow!("{e}"))?;
+    let report = store::get_category_spending_report(&conn, start_date_ms, end_date_ms, &currency)
+        .map_err(|e| anyhow::anyhow!("{e}"))?;
+
+    Ok(CategoryReportDto {
+        currency: report.currency,
+        total_amount: report.total_cents as f64 / 100.0,
+        items: report
+            .items
+            .into_iter()
+            .map(|i| CategorySpendingDto {
+                category_id: i.category_id,
+                name: i.name,
+                color: i.color,
+                icon: i.icon,
+                total_amount: i.total_cents as f64 / 100.0,
+                percentage: i.percentage,
+                transaction_count: i.transaction_count,
+            })
+            .collect(),
+    })
+}
+
+/// Historial de flujo de caja mensual (ingresos vs gastos).
+pub fn get_monthly_cashflow_history(
+    db_path: String,
+    currency: String,
+    months_limit: i32,
+) -> anyhow::Result<Vec<CashflowItemDto>> {
+    let conn = store::open_default(&db_path).map_err(|e| anyhow::anyhow!("{e}"))?;
+    let items = store::get_monthly_cashflow(&conn, &currency, months_limit)
+        .map_err(|e| anyhow::anyhow!("{e}"))?;
+
+    Ok(items
+        .into_iter()
+        .map(|i| CashflowItemDto {
+            year: i.year,
+            month: i.month,
+            income_amount: i.income_cents as f64 / 100.0,
+            expense_amount: i.expense_cents as f64 / 100.0,
+            net_amount: i.net_cents as f64 / 100.0,
+            currency: i.currency,
+        })
+        .collect())
+}
+
+/// Proyección de compromisos futuros de cuotas en tarjetas de crédito.
+pub fn get_installment_commitments(
+    db_path: String,
+    currency: String,
+) -> anyhow::Result<Vec<InstallmentProjectionDto>> {
+    let conn = store::open_default(&db_path).map_err(|e| anyhow::anyhow!("{e}"))?;
+    let items = store::get_installment_projections(&conn, &currency)
+        .map_err(|e| anyhow::anyhow!("{e}"))?;
+
+    Ok(items
+        .into_iter()
+        .map(|i| InstallmentProjectionDto {
+            cycle_year: i.cycle_year,
+            cycle_month: i.cycle_month,
+            total_amount: i.total_cents as f64 / 100.0,
+            count: i.count,
+            currency: i.currency,
+        })
+        .collect())
+}
+
+/// Indicadores financieros clave (KPIs) para un período dado.
+pub fn get_financial_kpis(
+    db_path: String,
+    start_date_ms: i64,
+    end_date_ms: i64,
+    currency: String,
+) -> anyhow::Result<FinancialKpisDto> {
+    let conn = store::open_default(&db_path).map_err(|e| anyhow::anyhow!("{e}"))?;
+    let k = store::get_financial_kpis(&conn, start_date_ms, end_date_ms, &currency)
+        .map_err(|e| anyhow::anyhow!("{e}"))?;
+
+    Ok(FinancialKpisDto {
+        total_income: k.total_income_cents as f64 / 100.0,
+        total_expense: k.total_expense_cents as f64 / 100.0,
+        net_savings: k.net_savings_cents as f64 / 100.0,
+        savings_rate: k.savings_rate,
+        top_category_name: k.top_category_name,
+        top_category_amount: k.top_category_cents.map(|c| c as f64 / 100.0),
+    })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -760,6 +906,117 @@ mod tests {
         // 6. Verificar que la lista de movimientos muestra la transferencia
         let movs = list_movements(db_path.clone(), 10).unwrap();
         assert!(movs.iter().any(|m| m.tipo == "transferencia" && m.monto == 1_200_000.0));
+
+        let _ = std::fs::remove_file(&db_path);
+    }
+
+    #[test]
+    fn api_analytics_reports_test() {
+        let db_path = format!("/tmp/test_api_analytics_{}.db", store::now_ms());
+        let _ = std::fs::remove_file(&db_path);
+
+        init_database(db_path.clone(), None).unwrap();
+        let accs = list_accounts(db_path.clone()).unwrap();
+        let cash_id = accs[0].id.clone();
+
+        let now = store::now_ms();
+        let start_ms = now - 86400 * 1000;
+        let end_ms = now + 86400 * 1000;
+
+        // 1. Ingreso
+        confirm_movement(
+            db_path.clone(),
+            "ingreso".into(),
+            200_000.0,
+            "ARS".into(),
+            "sueldo".into(),
+            "Sueldo".into(),
+            "2026-10-01".into(),
+            "sueldo 200k".into(),
+            Some(cash_id.clone()),
+        ).unwrap();
+
+        // 2. Gastos
+        confirm_movement(
+            db_path.clone(),
+            "gasto".into(),
+            30_000.0,
+            "ARS".into(),
+            "supermercado".into(),
+            "Compras".into(),
+            "2026-10-01".into(),
+            "gasto 30k super".into(),
+            Some(cash_id.clone()),
+        ).unwrap();
+
+        confirm_movement(
+            db_path.clone(),
+            "gasto".into(),
+            10_000.0,
+            "ARS".into(),
+            "transporte".into(),
+            "Nafta".into(),
+            "2026-10-01".into(),
+            "nafta 10k".into(),
+            Some(cash_id.clone()),
+        ).unwrap();
+
+        // 3. Category Report
+        let cat_rep = get_category_spending_report(db_path.clone(), start_ms, end_ms, "ARS".into()).unwrap();
+        assert_eq!(cat_rep.total_amount, 40_000.0);
+        assert_eq!(cat_rep.items.len(), 2);
+        assert_eq!(cat_rep.items[0].name, "supermercado");
+        assert_eq!(cat_rep.items[0].total_amount, 30_000.0);
+        assert_eq!(cat_rep.items[0].percentage, 75.0);
+
+        // 4. Financial KPIs
+        let kpis = get_financial_kpis(db_path.clone(), start_ms, end_ms, "ARS".into()).unwrap();
+        assert_eq!(kpis.total_income, 200_000.0);
+        assert_eq!(kpis.total_expense, 40_000.0);
+        assert_eq!(kpis.net_savings, 160_000.0);
+        assert_eq!(kpis.savings_rate, 80.0);
+        assert_eq!(kpis.top_category_name.as_deref(), Some("supermercado"));
+        assert_eq!(kpis.top_category_amount, Some(30_000.0));
+
+        // 5. Monthly Cashflow
+        let cashflow = get_monthly_cashflow_history(db_path.clone(), "ARS".into(), 6).unwrap();
+        assert!(!cashflow.is_empty());
+        let last_cf = cashflow.last().unwrap();
+        assert_eq!(last_cf.income_amount, 200_000.0);
+        assert_eq!(last_cf.expense_amount, 40_000.0);
+        assert_eq!(last_cf.net_amount, 160_000.0);
+
+        // 6. Tarjeta y proyección de cuotas
+        let card_id = create_account(
+            db_path.clone(),
+            "Mastercard".into(),
+            "credit_card".into(),
+            "ARS".into(),
+            0.0,
+            Some(500_000.0),
+            Some(25),
+            Some(5),
+            "#111111".into(),
+            "credit_card".into(),
+        ).unwrap();
+
+        confirm_credit_purchase(
+            db_path.clone(),
+            card_id,
+            30_000.0,
+            3,
+            "hogar".into(),
+            "Mesa".into(),
+            2026,
+            11,
+        ).unwrap();
+
+        let commitments = get_installment_commitments(db_path.clone(), "ARS".into()).unwrap();
+        assert_eq!(commitments.len(), 3);
+        assert_eq!(commitments[0].cycle_month, 11);
+        assert_eq!(commitments[0].total_amount, 10_000.0);
+        assert_eq!(commitments[1].cycle_month, 12);
+        assert_eq!(commitments[1].total_amount, 10_000.0);
 
         let _ = std::fs::remove_file(&db_path);
     }

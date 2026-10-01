@@ -8,7 +8,7 @@ import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
 // These functions are ignored because they are not marked as `pub`: `engine`
 // These types are ignored because they are neither used by any `pub` functions nor (for structs and enums) marked `#[frb(unignore)]`: `Engine`
-// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `from`, `from`, `from`, `from`, `from`
+// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `from`, `from`, `from`, `from`, `from`
 
 /// Pipeline con inferencia mockeada: verifica el cableado sin modelo.
 Future<ProposalDto> proposeMocked(
@@ -201,6 +201,44 @@ Future<List<MovementDto>> listMovements(
         {required String dbPath, required PlatformInt64 limit}) =>
     RustLib.instance.api.crateApiListMovements(dbPath: dbPath, limit: limit);
 
+/// Reporte de gastos por categoría en un rango de fechas.
+Future<CategoryReportDto> getCategorySpendingReport(
+        {required String dbPath,
+        required PlatformInt64 startDateMs,
+        required PlatformInt64 endDateMs,
+        required String currency}) =>
+    RustLib.instance.api.crateApiGetCategorySpendingReport(
+        dbPath: dbPath,
+        startDateMs: startDateMs,
+        endDateMs: endDateMs,
+        currency: currency);
+
+/// Historial de flujo de caja mensual (ingresos vs gastos).
+Future<List<CashflowItemDto>> getMonthlyCashflowHistory(
+        {required String dbPath,
+        required String currency,
+        required int monthsLimit}) =>
+    RustLib.instance.api.crateApiGetMonthlyCashflowHistory(
+        dbPath: dbPath, currency: currency, monthsLimit: monthsLimit);
+
+/// Proyección de compromisos futuros de cuotas en tarjetas de crédito.
+Future<List<InstallmentProjectionDto>> getInstallmentCommitments(
+        {required String dbPath, required String currency}) =>
+    RustLib.instance.api
+        .crateApiGetInstallmentCommitments(dbPath: dbPath, currency: currency);
+
+/// Indicadores financieros clave (KPIs) para un período dado.
+Future<FinancialKpisDto> getFinancialKpis(
+        {required String dbPath,
+        required PlatformInt64 startDateMs,
+        required PlatformInt64 endDateMs,
+        required String currency}) =>
+    RustLib.instance.api.crateApiGetFinancialKpis(
+        dbPath: dbPath,
+        startDateMs: startDateMs,
+        endDateMs: endDateMs,
+        currency: currency);
+
 /// DTO para cuentas y saldos en UI.
 class AccountDto {
   final String id;
@@ -341,6 +379,112 @@ class CardStatementItemDto {
           status == other.status;
 }
 
+class CashflowItemDto {
+  final int year;
+  final int month;
+  final double incomeAmount;
+  final double expenseAmount;
+  final double netAmount;
+  final String currency;
+
+  const CashflowItemDto({
+    required this.year,
+    required this.month,
+    required this.incomeAmount,
+    required this.expenseAmount,
+    required this.netAmount,
+    required this.currency,
+  });
+
+  @override
+  int get hashCode =>
+      year.hashCode ^
+      month.hashCode ^
+      incomeAmount.hashCode ^
+      expenseAmount.hashCode ^
+      netAmount.hashCode ^
+      currency.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is CashflowItemDto &&
+          runtimeType == other.runtimeType &&
+          year == other.year &&
+          month == other.month &&
+          incomeAmount == other.incomeAmount &&
+          expenseAmount == other.expenseAmount &&
+          netAmount == other.netAmount &&
+          currency == other.currency;
+}
+
+class CategoryReportDto {
+  final String currency;
+  final double totalAmount;
+  final List<CategorySpendingDto> items;
+
+  const CategoryReportDto({
+    required this.currency,
+    required this.totalAmount,
+    required this.items,
+  });
+
+  @override
+  int get hashCode => currency.hashCode ^ totalAmount.hashCode ^ items.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is CategoryReportDto &&
+          runtimeType == other.runtimeType &&
+          currency == other.currency &&
+          totalAmount == other.totalAmount &&
+          items == other.items;
+}
+
+class CategorySpendingDto {
+  final String? categoryId;
+  final String name;
+  final String color;
+  final String icon;
+  final double totalAmount;
+  final double percentage;
+  final int transactionCount;
+
+  const CategorySpendingDto({
+    this.categoryId,
+    required this.name,
+    required this.color,
+    required this.icon,
+    required this.totalAmount,
+    required this.percentage,
+    required this.transactionCount,
+  });
+
+  @override
+  int get hashCode =>
+      categoryId.hashCode ^
+      name.hashCode ^
+      color.hashCode ^
+      icon.hashCode ^
+      totalAmount.hashCode ^
+      percentage.hashCode ^
+      transactionCount.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is CategorySpendingDto &&
+          runtimeType == other.runtimeType &&
+          categoryId == other.categoryId &&
+          name == other.name &&
+          color == other.color &&
+          icon == other.icon &&
+          totalAmount == other.totalAmount &&
+          percentage == other.percentage &&
+          transactionCount == other.transactionCount;
+}
+
 /// DTO con cotización histórica o implícita entre monedas.
 class ExchangeRateDto {
   final String baseCurrency;
@@ -371,6 +515,80 @@ class ExchangeRateDto {
           quoteCurrency == other.quoteCurrency &&
           rate == other.rate &&
           timestamp == other.timestamp;
+}
+
+class FinancialKpisDto {
+  final double totalIncome;
+  final double totalExpense;
+  final double netSavings;
+  final double savingsRate;
+  final String? topCategoryName;
+  final double? topCategoryAmount;
+
+  const FinancialKpisDto({
+    required this.totalIncome,
+    required this.totalExpense,
+    required this.netSavings,
+    required this.savingsRate,
+    this.topCategoryName,
+    this.topCategoryAmount,
+  });
+
+  @override
+  int get hashCode =>
+      totalIncome.hashCode ^
+      totalExpense.hashCode ^
+      netSavings.hashCode ^
+      savingsRate.hashCode ^
+      topCategoryName.hashCode ^
+      topCategoryAmount.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is FinancialKpisDto &&
+          runtimeType == other.runtimeType &&
+          totalIncome == other.totalIncome &&
+          totalExpense == other.totalExpense &&
+          netSavings == other.netSavings &&
+          savingsRate == other.savingsRate &&
+          topCategoryName == other.topCategoryName &&
+          topCategoryAmount == other.topCategoryAmount;
+}
+
+class InstallmentProjectionDto {
+  final int cycleYear;
+  final int cycleMonth;
+  final double totalAmount;
+  final int count;
+  final String currency;
+
+  const InstallmentProjectionDto({
+    required this.cycleYear,
+    required this.cycleMonth,
+    required this.totalAmount,
+    required this.count,
+    required this.currency,
+  });
+
+  @override
+  int get hashCode =>
+      cycleYear.hashCode ^
+      cycleMonth.hashCode ^
+      totalAmount.hashCode ^
+      count.hashCode ^
+      currency.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is InstallmentProjectionDto &&
+          runtimeType == other.runtimeType &&
+          cycleYear == other.cycleYear &&
+          cycleMonth == other.cycleMonth &&
+          totalAmount == other.totalAmount &&
+          count == other.count &&
+          currency == other.currency;
 }
 
 /// Movimiento guardado, listo para la lista de la UI.
