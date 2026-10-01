@@ -1,16 +1,17 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'src/auth/onboarding_vault_screen.dart';
 import 'src/auth/unlock_screen.dart';
 import 'src/auth/vault_service.dart';
 import 'src/auth/welcome_screen.dart';
+import 'src/providers/privacy_provider.dart';
 import 'src/rust/api.dart/frb_generated.dart';
 import 'src/screens/accounts_tab.dart';
 import 'src/screens/home_tab.dart';
 import 'src/screens/recurring_tab.dart';
 import 'src/screens/metrics_tab.dart';
-
+import 'src/screens/search_screen.dart';
 import 'src/screens/settings_screen.dart';
-
 import 'src/theme/mn_theme.dart';
 
 Future<void> main() async {
@@ -132,6 +133,33 @@ class _HomePageState extends State<HomePage> {
         title: Text(titles[_currentTabIndex]),
         elevation: 0,
         actions: [
+          ValueListenableBuilder<bool>(
+            valueListenable: PrivacyController.instance,
+            builder: (context, isPrivate, _) {
+              return IconButton(
+                icon: Icon(
+                  isPrivate ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                ),
+                tooltip: isPrivate ? 'Mostrar montos' : 'Ocultar montos',
+                onPressed: () {
+                  HapticFeedback.selectionClick();
+                  PrivacyController.instance.toggle();
+                },
+              );
+            },
+          ),
+          IconButton(
+            icon: const Icon(Icons.search),
+            tooltip: 'Buscar movimientos',
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const SearchScreen(),
+                ),
+              );
+            },
+          ),
           IconButton(
             icon: const Icon(Icons.settings_outlined),
             tooltip: 'Ajustes y Respaldos',

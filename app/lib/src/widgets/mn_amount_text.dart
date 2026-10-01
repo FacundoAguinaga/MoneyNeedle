@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../providers/privacy_provider.dart';
 import '../theme/mn_theme.dart';
 
 /// Formateador y visualizador de montos monetarios de alta precisión.
@@ -11,7 +12,7 @@ class MnAmountText extends StatelessWidget {
   final bool isExpense;
   final bool isIncome;
   final bool isTransfer;
-  final bool obscure;
+  final bool? obscure;
 
   const MnAmountText({
     super.key,
@@ -23,7 +24,7 @@ class MnAmountText extends StatelessWidget {
     this.isExpense = false,
     this.isIncome = false,
     this.isTransfer = false,
-    this.obscure = false,
+    this.obscure,
   });
 
   /// Formatea un monto con separador de miles y 2 decimales estándar rioplatenses.
@@ -62,45 +63,51 @@ class MnAmountText extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (obscure) {
-      return Text(
-        '••••••',
-        style: (style ?? Theme.of(context).textTheme.bodyMedium)?.copyWith(
-          letterSpacing: 2,
-          fontWeight: FontWeight.bold,
-        ),
-      );
-    }
+    return ValueListenableBuilder<bool>(
+      valueListenable: PrivacyController.instance,
+      builder: (context, isGlobalPrivate, _) {
+        final isObscured = obscure ?? isGlobalPrivate;
+        if (isObscured) {
+          return Text(
+            '••••••',
+            style: (style ?? Theme.of(context).textTheme.bodyMedium)?.copyWith(
+              letterSpacing: 2,
+              fontWeight: FontWeight.bold,
+            ),
+          );
+        }
 
-    final mnColors = context.mnColors;
-    Color? textColor;
+        final mnColors = context.mnColors;
+        Color? textColor;
 
-    if (colorize) {
-      if (isExpense || amount < 0) {
-        textColor = mnColors.expense;
-      } else if (isIncome || amount > 0) {
-        textColor = mnColors.income;
-      } else if (isTransfer) {
-        textColor = mnColors.transfer;
-      }
-    }
+        if (colorize) {
+          if (isExpense || amount < 0) {
+            textColor = mnColors.expense;
+          } else if (isIncome || amount > 0) {
+            textColor = mnColors.income;
+          } else if (isTransfer) {
+            textColor = mnColors.transfer;
+          }
+        }
 
-    final formatted = format(
-      amount,
-      currency: currency,
-      showSign: showSign,
-    );
+        final formatted = format(
+          amount,
+          currency: currency,
+          showSign: showSign,
+        );
 
-    final baseStyle = style ?? Theme.of(context).textTheme.bodyLarge;
-    final finalStyle = baseStyle?.copyWith(
-      color: textColor ?? baseStyle.color,
-      fontWeight: baseStyle.fontWeight ?? FontWeight.w600,
-      fontFeatures: const [FontFeature.tabularFigures()],
-    );
+        final baseStyle = style ?? Theme.of(context).textTheme.bodyLarge;
+        final finalStyle = baseStyle?.copyWith(
+          color: textColor ?? baseStyle.color,
+          fontWeight: baseStyle.fontWeight ?? FontWeight.w600,
+          fontFeatures: const [FontFeature.tabularFigures()],
+        );
 
-    return Text(
-      formatted,
-      style: finalStyle,
+        return Text(
+          formatted,
+          style: finalStyle,
+        );
+      },
     );
   }
 }
