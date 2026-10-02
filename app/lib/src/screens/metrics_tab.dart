@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 import '../auth/vault_service.dart';
 import '../rust/api.dart/api.dart';
+import '../theme/mn_theme.dart';
+import '../widgets/mn_card.dart';
 
 enum PeriodFilter {
   esteMes('Este mes'),
@@ -241,14 +243,18 @@ class _MetricsTabState extends State<MetricsTab> {
       child: Column(
         children: [
           // Sub-pestañas: Analítica, Presupuestos, Metas
-          Material(
+          Container(
             color: theme.colorScheme.surface,
-            elevation: 1,
-            child: const TabBar(
-              tabs: [
-                Tab(icon: Icon(Icons.insights), text: 'Analítica'),
-                Tab(icon: Icon(Icons.account_balance_wallet_outlined), text: 'Presupuestos'),
-                Tab(icon: Icon(Icons.flag_outlined), text: 'Metas'),
+            child: TabBar(
+              indicatorSize: TabBarIndicatorSize.tab,
+              indicatorColor: theme.colorScheme.primary,
+              labelColor: theme.colorScheme.primary,
+              unselectedLabelColor: theme.colorScheme.onSurfaceVariant,
+              labelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+              tabs: const [
+                Tab(icon: Icon(Icons.insights_rounded, size: 20), text: 'Analítica'),
+                Tab(icon: Icon(Icons.account_balance_wallet_outlined, size: 20), text: 'Presupuestos'),
+                Tab(icon: Icon(Icons.flag_outlined, size: 20), text: 'Metas'),
               ],
             ),
           ),
@@ -355,7 +361,8 @@ class _MetricsTabState extends State<MetricsTab> {
   }
 
   Widget _buildKpiGrid(FinancialKpisDto k, ThemeData theme) {
-    final netColor = k.netSavings >= 0 ? Colors.green.shade700 : Colors.red.shade700;
+    final colors = context.mnColors;
+    final netColor = k.netSavings >= 0 ? colors.income : colors.expense;
 
     return Column(
       children: [
@@ -365,8 +372,8 @@ class _MetricsTabState extends State<MetricsTab> {
               child: _buildKpiCard(
                 'Ingresos',
                 _formatAmount(k.totalIncome),
-                Icons.arrow_downward,
-                Colors.green.shade600,
+                Icons.arrow_downward_rounded,
+                colors.income,
                 theme,
               ),
             ),
@@ -375,8 +382,8 @@ class _MetricsTabState extends State<MetricsTab> {
               child: _buildKpiCard(
                 'Gastos',
                 _formatAmount(k.totalExpense),
-                Icons.arrow_upward,
-                Colors.red.shade600,
+                Icons.arrow_upward_rounded,
+                colors.expense,
                 theme,
               ),
             ),
@@ -389,7 +396,7 @@ class _MetricsTabState extends State<MetricsTab> {
               child: _buildKpiCard(
                 'Balance Neto',
                 _formatAmount(k.netSavings),
-                k.netSavings >= 0 ? Icons.savings : Icons.trending_down,
+                k.netSavings >= 0 ? Icons.savings_rounded : Icons.trending_down_rounded,
                 netColor,
                 theme,
               ),
@@ -399,7 +406,7 @@ class _MetricsTabState extends State<MetricsTab> {
               child: _buildKpiCard(
                 'Tasa de Ahorro',
                 '${k.savingsRate.toStringAsFixed(1)}%',
-                Icons.pie_chart_outline,
+                Icons.pie_chart_rounded,
                 theme.colorScheme.primary,
                 theme,
               ),
@@ -417,42 +424,42 @@ class _MetricsTabState extends State<MetricsTab> {
     Color color,
     ThemeData theme,
   ) {
-    return Card(
-      elevation: 0,
-      color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.4),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-        side: BorderSide(color: theme.colorScheme.outlineVariant.withValues(alpha: 0.5)),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(icon, size: 16, color: color),
-                const SizedBox(width: 6),
-                Text(
-                  title,
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: theme.colorScheme.onSurfaceVariant,
-                  ),
+    return MnCard(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                title,
+                style: theme.textTheme.labelSmall?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                  fontWeight: FontWeight.w500,
                 ),
-              ],
-            ),
-            const SizedBox(height: 6),
-            Text(
-              value,
-              style: theme.textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.bold,
-                color: color,
               ),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
+              Container(
+                padding: const EdgeInsets.all(4),
+                decoration: BoxDecoration(
+                  color: color.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Icon(icon, size: 14, color: color),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Text(
+            value,
+            style: theme.textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.bold,
+              color: color,
             ),
-          ],
-        ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ],
       ),
     );
   }
@@ -461,34 +468,28 @@ class _MetricsTabState extends State<MetricsTab> {
     final items = _categoryReport?.items ?? [];
     final hasData = items.isNotEmpty && (_categoryReport?.totalAmount ?? 0) > 0;
 
-    return Card(
-      elevation: 0,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-        side: BorderSide(color: theme.colorScheme.outlineVariant.withValues(alpha: 0.5)),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
+    return MnCard(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Gastos por Categoría',
+                style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+              ),
+              if (hasData)
                 Text(
-                  'Gastos por Categoría',
-                  style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
-                ),
-                if (hasData)
-                  Text(
-                    _formatAmount(_categoryReport!.totalAmount),
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                      color: Colors.red.shade700,
-                    ),
+                  _formatAmount(_categoryReport!.totalAmount),
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: context.mnColors.expense,
                   ),
-              ],
-            ),
+                ),
+            ],
+          ),
             const SizedBox(height: 16),
             if (!hasData)
               Padding(
@@ -623,138 +624,131 @@ class _MetricsTabState extends State<MetricsTab> {
             ],
           ],
         ),
-      ),
-    );
-  }
+      );
+    }
 
   Widget _buildCashflowCard(ThemeData theme) {
     final hasData = _cashflow.isNotEmpty;
+    final colors = context.mnColors;
 
-    return Card(
-      elevation: 0,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-        side: BorderSide(color: theme.colorScheme.outlineVariant.withValues(alpha: 0.5)),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  'Flujo de Caja Mensual',
-                  style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
-                ),
-                Row(
-                  children: [
-                    _buildLegendDot(Colors.green.shade600, 'Ingresos'),
-                    const SizedBox(width: 8),
-                    _buildLegendDot(Colors.red.shade600, 'Gastos'),
-                  ],
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            if (!hasData)
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: 24),
-                child: Center(
-                  child: Text(
-                    'No hay suficientes datos mensuales',
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      color: theme.colorScheme.onSurfaceVariant,
-                    ),
+    return MnCard(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Flujo de Caja Mensual',
+                style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+              ),
+              Row(
+                children: [
+                  _buildLegendDot(colors.income, 'Ingresos'),
+                  const SizedBox(width: 8),
+                  _buildLegendDot(colors.expense, 'Gastos'),
+                ],
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          if (!hasData)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 24),
+              child: Center(
+                child: Text(
+                  'No hay suficientes datos mensuales',
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
                   ),
                 ),
-              )
-            else
-              SizedBox(
-                height: 190,
-                child: BarChart(
-                  BarChartData(
-                    alignment: BarChartAlignment.spaceAround,
-                    maxY: _getMaxY(_cashflow),
-                    barTouchData: BarTouchData(
-                      enabled: true,
-                      touchTooltipData: BarTouchTooltipData(
-                        getTooltipItem: (group, groupIndex, rod, rodIndex) {
-                          final item = _cashflow[groupIndex];
-                          final isIncome = rodIndex == 0;
-                          final amount = isIncome ? item.incomeAmount : item.expenseAmount;
-                          final title = isIncome ? 'Ingreso' : 'Gasto';
-                          return BarTooltipItem(
-                            '$title: ${_formatAmount(amount)}',
-                            const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+              ),
+            )
+          else
+            SizedBox(
+              height: 190,
+              child: BarChart(
+                BarChartData(
+                  alignment: BarChartAlignment.spaceAround,
+                  maxY: _getMaxY(_cashflow),
+                  barTouchData: BarTouchData(
+                    enabled: true,
+                    touchTooltipData: BarTouchTooltipData(
+                      getTooltipItem: (group, groupIndex, rod, rodIndex) {
+                        final item = _cashflow[groupIndex];
+                        final isIncome = rodIndex == 0;
+                        final amount = isIncome ? item.incomeAmount : item.expenseAmount;
+                        final title = isIncome ? 'Ingreso' : 'Gasto';
+                        return BarTooltipItem(
+                          '$title: ${_formatAmount(amount)}',
+                          const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                        );
+                      },
+                    ),
+                  ),
+                  titlesData: FlTitlesData(
+                    show: true,
+                    bottomTitles: AxisTitles(
+                      sideTitles: SideTitles(
+                        showTitles: true,
+                        getTitlesWidget: (value, meta) {
+                          final idx = value.toInt();
+                          if (idx < 0 || idx >= _cashflow.length) {
+                            return const SizedBox.shrink();
+                          }
+                          final item = _cashflow[idx];
+                          final monthLabel = (item.month >= 1 && item.month <= 12)
+                              ? _monthNames[item.month - 1]
+                              : '${item.month}';
+                          return Padding(
+                            padding: const EdgeInsets.only(top: 6),
+                            child: Text(
+                              monthLabel,
+                              style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
+                            ),
                           );
                         },
                       ),
                     ),
-                    titlesData: FlTitlesData(
-                      show: true,
-                      bottomTitles: AxisTitles(
-                        sideTitles: SideTitles(
-                          showTitles: true,
-                          getTitlesWidget: (value, meta) {
-                            final idx = value.toInt();
-                            if (idx < 0 || idx >= _cashflow.length) {
-                              return const SizedBox.shrink();
-                            }
-                            final item = _cashflow[idx];
-                            final monthLabel = (item.month >= 1 && item.month <= 12)
-                                ? _monthNames[item.month - 1]
-                                : '${item.month}';
-                            return Padding(
-                              padding: const EdgeInsets.only(top: 6),
-                              child: Text(
-                                monthLabel,
-                                style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
-                              ),
-                            );
-                          },
-                        ),
-                      ),
-                      leftTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                      topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                      rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                    ),
-                    gridData: FlGridData(
-                      show: true,
-                      drawVerticalLine: false,
-                      horizontalInterval: _getGridInterval(_cashflow),
-                      getDrawingHorizontalLine: (value) => FlLine(
-                        color: theme.colorScheme.outlineVariant.withValues(alpha: 0.3),
-                        strokeWidth: 1,
-                      ),
-                    ),
-                    borderData: FlBorderData(show: false),
-                    barGroups: List.generate(_cashflow.length, (i) {
-                      final item = _cashflow[i];
-                      return BarChartGroupData(
-                        x: i,
-                        barRods: [
-                          BarChartRodData(
-                            toY: item.incomeAmount,
-                            color: Colors.green.shade600,
-                            width: 10,
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                          BarChartRodData(
-                            toY: item.expenseAmount,
-                            color: Colors.red.shade600,
-                            width: 10,
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                        ],
-                      );
-                    }),
+                    leftTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                    topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                    rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
                   ),
+                  gridData: FlGridData(
+                    show: true,
+                    drawVerticalLine: false,
+                    horizontalInterval: _getGridInterval(_cashflow),
+                    getDrawingHorizontalLine: (value) => FlLine(
+                      color: theme.colorScheme.outlineVariant.withValues(alpha: 0.3),
+                      strokeWidth: 1,
+                    ),
+                  ),
+                  borderData: FlBorderData(show: false),
+                  barGroups: List.generate(_cashflow.length, (i) {
+                    final item = _cashflow[i];
+                    return BarChartGroupData(
+                      x: i,
+                      barRods: [
+                        BarChartRodData(
+                          toY: item.incomeAmount,
+                          color: colors.income,
+                          width: 10,
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        BarChartRodData(
+                          toY: item.expenseAmount,
+                          color: colors.expense,
+                          width: 10,
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                      ],
+                    );
+                  }),
                 ),
               ),
-          ],
-        ),
+            ),
+        ],
       ),
     );
   }
@@ -974,8 +968,8 @@ class _MetricsTabState extends State<MetricsTab> {
                           style: theme.textTheme.titleMedium?.copyWith(
                             fontWeight: FontWeight.bold,
                             color: totalSpent > totalBudget && totalBudget > 0
-                                ? Colors.red.shade700
-                                : Colors.green.shade700,
+                                ? context.mnColors.expense
+                                : context.mnColors.income,
                           ),
                         ),
                       ],
@@ -1026,11 +1020,11 @@ class _MetricsTabState extends State<MetricsTab> {
                 final color = _parseColor(b.categoryColor);
 
                 // Determinar color de la barra
-                Color barColor = Colors.green.shade600;
+                Color barColor = context.mnColors.income;
                 if (b.isOverBudget) {
-                  barColor = Colors.red.shade600;
+                  barColor = context.mnColors.expense;
                 } else if (b.isWarning) {
-                  barColor = Colors.amber.shade700;
+                  barColor = context.mnColors.warning;
                 }
 
                 return Card(
@@ -1039,7 +1033,7 @@ class _MetricsTabState extends State<MetricsTab> {
                     borderRadius: BorderRadius.circular(16),
                     side: BorderSide(
                       color: b.isOverBudget
-                          ? Colors.red.shade400
+                          ? context.mnColors.expense.withValues(alpha: 0.5)
                           : theme.colorScheme.outlineVariant.withValues(alpha: 0.5),
                     ),
                   ),
@@ -1070,13 +1064,13 @@ class _MetricsTabState extends State<MetricsTab> {
                               Container(
                                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                                 decoration: BoxDecoration(
-                                  color: Colors.red.shade100,
+                                  color: context.mnColors.expense.withValues(alpha: 0.15),
                                   borderRadius: BorderRadius.circular(8),
                                 ),
                                 child: Text(
                                   'Excedido',
                                   style: TextStyle(
-                                    color: Colors.red.shade900,
+                                    color: context.mnColors.expense,
                                     fontSize: 11,
                                     fontWeight: FontWeight.bold,
                                   ),
@@ -1086,13 +1080,13 @@ class _MetricsTabState extends State<MetricsTab> {
                               Container(
                                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                                 decoration: BoxDecoration(
-                                  color: Colors.amber.shade100,
+                                  color: context.mnColors.warning.withValues(alpha: 0.15),
                                   borderRadius: BorderRadius.circular(8),
                                 ),
                                 child: Text(
                                   'Cerca del límite',
                                   style: TextStyle(
-                                    color: Colors.amber.shade900,
+                                    color: context.mnColors.warning,
                                     fontSize: 11,
                                     fontWeight: FontWeight.bold,
                                   ),
@@ -1153,7 +1147,7 @@ class _MetricsTabState extends State<MetricsTab> {
                           style: TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.bold,
-                            color: b.remainingAmount >= 0 ? Colors.green.shade700 : Colors.red.shade700,
+                            color: b.remainingAmount >= 0 ? context.mnColors.income : context.mnColors.expense,
                           ),
                         ),
                       ],
@@ -1366,7 +1360,7 @@ class _MetricsTabState extends State<MetricsTab> {
                         _formatAmount(totalSaved),
                         style: theme.textTheme.titleLarge?.copyWith(
                           fontWeight: FontWeight.bold,
-                          color: Colors.green.shade700,
+                          color: context.mnColors.income,
                         ),
                       ),
                     ],
@@ -1422,7 +1416,7 @@ class _MetricsTabState extends State<MetricsTab> {
                     borderRadius: BorderRadius.circular(16),
                     side: BorderSide(
                       color: isCompleted
-                          ? Colors.green.shade400
+                          ? context.mnColors.income
                           : theme.colorScheme.outlineVariant.withValues(alpha: 0.5),
                     ),
                   ),
@@ -1463,13 +1457,13 @@ class _MetricsTabState extends State<MetricsTab> {
                               Container(
                                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                                 decoration: BoxDecoration(
-                                  color: Colors.green.shade100,
+                                  color: context.mnColors.income.withValues(alpha: 0.15),
                                   borderRadius: BorderRadius.circular(8),
                                 ),
                                 child: Text(
                                   '¡Completada!',
                                   style: TextStyle(
-                                    color: Colors.green.shade900,
+                                    color: context.mnColors.income,
                                     fontSize: 11,
                                     fontWeight: FontWeight.bold,
                                   ),
@@ -1503,7 +1497,7 @@ class _MetricsTabState extends State<MetricsTab> {
                             value: (g.progressPercentage / 100).clamp(0.0, 1.0),
                             backgroundColor: theme.colorScheme.surfaceContainerHighest,
                             valueColor: AlwaysStoppedAnimation(
-                              isCompleted ? Colors.green.shade600 : theme.colorScheme.primary,
+                              isCompleted ? context.mnColors.income : theme.colorScheme.primary,
                             ),
                             minHeight: 8,
                           ),
@@ -1520,7 +1514,7 @@ class _MetricsTabState extends State<MetricsTab> {
                               isCompleted ? '¡Meta alcanzada!' : 'Faltan: ${_formatAmount(remaining)}',
                               style: TextStyle(
                                 fontSize: 12,
-                                color: isCompleted ? Colors.green.shade700 : theme.colorScheme.onSurfaceVariant,
+                                color: isCompleted ? context.mnColors.income : theme.colorScheme.onSurfaceVariant,
                               ),
                             ),
                           ],

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../auth/vault_service.dart';
 import '../rust/api.dart/api.dart';
+import '../theme/mn_theme.dart';
 import '../widgets/widgets.dart';
 
 /// Pantalla de detalle y edición completa de un movimiento financiero.
@@ -334,10 +335,10 @@ class _MovementDetailScreenState extends State<MovementDetailScreen> {
                         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                         decoration: BoxDecoration(
                           color: (isGasto
-                                  ? Colors.red
+                                  ? context.mnColors.expense
                                   : isIngreso
-                                      ? Colors.green
-                                      : Colors.blue)
+                                      ? context.mnColors.income
+                                      : context.mnColors.transfer)
                               .withValues(alpha: 0.12),
                           borderRadius: BorderRadius.circular(12),
                         ),
@@ -347,10 +348,10 @@ class _MovementDetailScreenState extends State<MovementDetailScreen> {
                             fontSize: 11,
                             fontWeight: FontWeight.bold,
                             color: isGasto
-                                ? Colors.red.shade800
+                                ? context.mnColors.expense
                                 : isIngreso
-                                    ? Colors.green.shade800
-                                    : Colors.blue.shade800,
+                                    ? context.mnColors.income
+                                    : context.mnColors.transfer,
                           ),
                         ),
                       ),

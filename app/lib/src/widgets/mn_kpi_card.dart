@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../theme/mn_theme.dart';
 import 'mn_amount_text.dart';
 import 'mn_card.dart';
 
@@ -79,13 +80,13 @@ class MnKpiCard extends StatelessWidget {
                   Icon(
                     deltaPercentage! >= 0 ? Icons.trending_up : Icons.trending_down,
                     size: 14,
-                    color: deltaPercentage! >= 0 ? Colors.red : Colors.green,
+                    color: deltaPercentage! >= 0 ? context.mnColors.expense : context.mnColors.income,
                   ),
                   const SizedBox(width: 4),
                   Text(
                     '${deltaPercentage! >= 0 ? '+' : ''}${deltaPercentage!.toStringAsFixed(1)}%',
                     style: theme.textTheme.labelSmall?.copyWith(
-                      color: deltaPercentage! >= 0 ? Colors.red : Colors.green,
+                      color: deltaPercentage! >= 0 ? context.mnColors.expense : context.mnColors.income,
                       fontWeight: FontWeight.w600,
                     ),
                   ),

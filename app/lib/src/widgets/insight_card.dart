@@ -18,25 +18,26 @@ class InsightCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
+    final isDark = theme.brightness == Brightness.dark;
     Color accentColor;
     IconData iconData;
 
     switch (insight.insightType.toLowerCase()) {
       case 'warning':
-        accentColor = Colors.orange.shade800;
+        accentColor = isDark ? const Color(0xFFFBBF24) : Colors.orange.shade800;
         iconData = Icons.warning_amber_rounded;
         break;
       case 'tip':
-        accentColor = Colors.teal.shade700;
+        accentColor = isDark ? const Color(0xFF2DD4BF) : Colors.teal.shade700;
         iconData = Icons.lightbulb_outline;
         break;
       case 'projection':
-        accentColor = Colors.indigo.shade600;
+        accentColor = isDark ? const Color(0xFF818CF8) : Colors.indigo.shade600;
         iconData = Icons.trending_up;
         break;
       case 'info':
       default:
-        accentColor = Colors.blueGrey.shade700;
+        accentColor = isDark ? const Color(0xFF94A3B8) : Colors.blueGrey.shade700;
         iconData = Icons.insights_outlined;
         break;
     }
@@ -88,7 +89,7 @@ class InsightCard extends StatelessWidget {
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                     decoration: BoxDecoration(
-                      color: Colors.teal.withValues(alpha: 0.12),
+                      color: (isDark ? const Color(0xFF2DD4BF) : Colors.teal).withValues(alpha: 0.12),
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Row(
@@ -97,14 +98,14 @@ class InsightCard extends StatelessWidget {
                         Text(
                           'Sugerido: ',
                           style: theme.textTheme.labelSmall?.copyWith(
-                            color: Colors.teal.shade800,
+                            color: isDark ? const Color(0xFF2DD4BF) : Colors.teal.shade800,
                             fontWeight: FontWeight.w500,
                           ),
                         ),
                         MnAmountText(
                           amount: insight.safeToSpendDaily!,
                           style: theme.textTheme.labelSmall?.copyWith(
-                            color: Colors.teal.shade900,
+                            color: isDark ? const Color(0xFF5EEAD4) : Colors.teal.shade900,
                             fontWeight: FontWeight.bold,
                           ),
                           colorize: false,
@@ -112,7 +113,7 @@ class InsightCard extends StatelessWidget {
                         Text(
                           '/día',
                           style: theme.textTheme.labelSmall?.copyWith(
-                            color: Colors.teal.shade800,
+                            color: isDark ? const Color(0xFF2DD4BF) : Colors.teal.shade800,
                             fontWeight: FontWeight.w500,
                           ),
                         ),
@@ -123,7 +124,7 @@ class InsightCard extends StatelessWidget {
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                     decoration: BoxDecoration(
-                      color: Colors.indigo.withValues(alpha: 0.12),
+                      color: (isDark ? const Color(0xFF818CF8) : Colors.indigo).withValues(alpha: 0.12),
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Row(
@@ -132,14 +133,14 @@ class InsightCard extends StatelessWidget {
                         Text(
                           'Cierre proyectado: ',
                           style: theme.textTheme.labelSmall?.copyWith(
-                            color: Colors.indigo.shade800,
+                            color: isDark ? const Color(0xFF818CF8) : Colors.indigo.shade800,
                             fontWeight: FontWeight.w500,
                           ),
                         ),
                         MnAmountText(
                           amount: insight.projectedMonthExpense,
                           style: theme.textTheme.labelSmall?.copyWith(
-                            color: Colors.indigo.shade900,
+                            color: isDark ? const Color(0xFFA5B4FC) : Colors.indigo.shade900,
                             fontWeight: FontWeight.bold,
                           ),
                           colorize: false,

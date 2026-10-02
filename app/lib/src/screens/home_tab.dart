@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../auth/vault_service.dart';
+import '../providers/privacy_provider.dart';
 import '../rust/api.dart/api.dart';
+import '../theme/mn_theme.dart';
 import '../widgets/widgets.dart';
 import 'movement_detail_screen.dart';
+import 'search_screen.dart';
 
 class PendingProposal {
   final String texto;
@@ -191,6 +194,7 @@ class HomeTabState extends State<HomeTab> {
 
   Widget _buildSummaryHeader() {
     final theme = Theme.of(context);
+    final colors = context.mnColors;
     final summary = _summary;
     final streak = _streak;
 
@@ -207,10 +211,9 @@ class HomeTabState extends State<HomeTab> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // Card principal de Saldo Total Consolidado
+          // Tarjeta Hero de Balance Consolidado
           MnCard(
-            padding: const EdgeInsets.all(18),
-            backgroundColor: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.35),
+            padding: const EdgeInsets.all(20),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -222,26 +225,33 @@ class HomeTabState extends State<HomeTab> {
                       style: theme.textTheme.labelMedium?.copyWith(
                         color: theme.colorScheme.onSurfaceVariant,
                         fontWeight: FontWeight.w600,
+                        letterSpacing: 0.2,
                       ),
                     ),
                     if (streak != null && streak.currentStreak > 0)
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                         decoration: BoxDecoration(
-                          color: Colors.amber.withValues(alpha: 0.15),
-                          borderRadius: BorderRadius.circular(12),
+                          color: Colors.orange.withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(16),
                           border: Border.all(
-                            color: Colors.amber.withValues(alpha: 0.4),
+                            color: Colors.orange.withValues(alpha: 0.3),
                           ),
                         ),
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            const Text('🔥 ', style: TextStyle(fontSize: 12)),
+                            const Icon(
+                              Icons.local_fire_department,
+                              color: Colors.orange,
+                              size: 14,
+                            ),
+                            const SizedBox(width: 4),
                             Text(
                               '${streak.currentStreak} días',
-                              style: theme.textTheme.labelSmall?.copyWith(
-                                color: Colors.orange.shade900,
+                              style: const TextStyle(
+                                color: Colors.orange,
+                                fontSize: 12,
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
@@ -250,94 +260,170 @@ class HomeTabState extends State<HomeTab> {
                       ),
                   ],
                 ),
-                const SizedBox(height: 6),
-                MnAmountText(
-                  amount: totalBalance,
-                  currency: currency,
-                  colorize: false,
-                  style: theme.textTheme.headlineMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 16),
-                const Divider(height: 1),
-                const SizedBox(height: 12),
-                // Fila de Ingresos y Gastos del mes
+                const SizedBox(height: 8),
                 Row(
                   children: [
                     Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              const Icon(Icons.arrow_downward, size: 14, color: Colors.green),
-                              const SizedBox(width: 4),
-                              Text(
-                                'Ingresos mes',
-                                style: theme.textTheme.labelSmall?.copyWith(
-                                  color: theme.colorScheme.onSurfaceVariant,
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 2),
-                          MnAmountText(
-                            amount: income,
-                            currency: currency,
-                            colorize: true,
-                            isIncome: true,
-                            style: theme.textTheme.titleSmall?.copyWith(
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ],
+                      child: MnAmountText(
+                        amount: totalBalance,
+                        currency: currency,
+                        colorize: false,
+                        style: theme.textTheme.headlineMedium?.copyWith(
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: -0.5,
+                        ),
                       ),
                     ),
+                    ValueListenableBuilder<bool>(
+                      valueListenable: PrivacyController.instance,
+                      builder: (context, isPrivate, _) {
+                        return IconButton(
+                          icon: Icon(
+                            isPrivate ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                            size: 20,
+                            color: theme.colorScheme.onSurfaceVariant,
+                          ),
+                          tooltip: isPrivate ? 'Mostrar montos' : 'Ocultar montos',
+                          onPressed: () {
+                            HapticFeedback.selectionClick();
+                            PrivacyController.instance.toggle();
+                          },
+                        );
+                      },
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                const Divider(height: 1),
+                const SizedBox(height: 14),
+                // Cajas de Ingresos y Gastos del Mes
+                Row(
+                  children: [
                     Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              const Icon(Icons.arrow_upward, size: 14, color: Colors.red),
-                              const SizedBox(width: 4),
-                              Text(
-                                'Gastos mes',
-                                style: theme.textTheme.labelSmall?.copyWith(
-                                  color: theme.colorScheme.onSurfaceVariant,
-                                ),
-                              ),
-                              if (delta != null) ...[
+                      child: Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: colors.income.withValues(alpha: 0.08),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: colors.income.withValues(alpha: 0.2),
+                          ),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Icon(Icons.arrow_downward_rounded, size: 14, color: colors.income),
                                 const SizedBox(width: 4),
                                 Text(
-                                  '${delta >= 0 ? '+' : ''}${delta.toStringAsFixed(0)}%',
-                                  style: TextStyle(
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.bold,
-                                    color: delta > 0 ? Colors.red : Colors.green,
+                                  'Ingresos mes',
+                                  style: theme.textTheme.labelSmall?.copyWith(
+                                    color: theme.colorScheme.onSurfaceVariant,
+                                    fontWeight: FontWeight.w500,
                                   ),
                                 ),
                               ],
-                            ],
-                          ),
-                          const SizedBox(height: 2),
-                          MnAmountText(
-                            amount: expense,
-                            currency: currency,
-                            colorize: true,
-                            isExpense: true,
-                            style: theme.textTheme.titleSmall?.copyWith(
-                              fontWeight: FontWeight.bold,
                             ),
+                            const SizedBox(height: 4),
+                            MnAmountText(
+                              amount: income,
+                              currency: currency,
+                              colorize: true,
+                              isIncome: true,
+                              style: theme.textTheme.titleSmall?.copyWith(
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: colors.expense.withValues(alpha: 0.08),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: colors.expense.withValues(alpha: 0.2),
                           ),
-                        ],
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Icon(Icons.arrow_upward_rounded, size: 14, color: colors.expense),
+                                const SizedBox(width: 4),
+                                Text(
+                                  'Gastos mes',
+                                  style: theme.textTheme.labelSmall?.copyWith(
+                                    color: theme.colorScheme.onSurfaceVariant,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                                if (delta != null) ...[
+                                  const Spacer(),
+                                  Text(
+                                    '${delta >= 0 ? '+' : ''}${delta.toStringAsFixed(0)}%',
+                                    style: TextStyle(
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.bold,
+                                      color: delta > 0 ? colors.expense : colors.income,
+                                    ),
+                                  ),
+                                ],
+                              ],
+                            ),
+                            const SizedBox(height: 4),
+                            MnAmountText(
+                              amount: expense,
+                              currency: currency,
+                              colorize: true,
+                              isExpense: true,
+                              style: theme.textTheme.titleSmall?.copyWith(
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   ],
                 ),
               ],
             ),
+          ),
+          const SizedBox(height: 12),
+
+          // Fila de Acciones Rápidas
+          Row(
+            children: [
+              Expanded(
+                child: FilledButton.tonalIcon(
+                  icon: const Icon(Icons.add_rounded, size: 18),
+                  label: const Text('Registrar'),
+                  onPressed: _abrirQuickAdd,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: OutlinedButton.icon(
+                  icon: const Icon(Icons.search_rounded, size: 18),
+                  label: const Text('Buscar'),
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const SearchScreen(),
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ],
           ),
         ],
       ),
@@ -355,7 +441,7 @@ class HomeTabState extends State<HomeTab> {
         onRefresh: _recargar,
         child: Column(
           children: [
-            // Resumen Financiero Compacto
+            // Resumen Financiero Hero
             _buildSummaryHeader(),
 
             // Carrusel de Insights Accionables
@@ -382,9 +468,26 @@ class HomeTabState extends State<HomeTab> {
 
             // Encabezado de Movimientos Recientes
             if (_movimientos.isNotEmpty)
-              const MnSectionHeader(
-                title: 'Movimientos recientes',
-                subtitle: 'Historial cronológico consolidado',
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'Movimientos recientes',
+                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                            fontWeight: FontWeight.bold,
+                          ),
+                    ),
+                    Text(
+                      '${_movimientos.length} registros',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
+                ),
               ),
 
             // Lista agrupada por fecha
@@ -409,11 +512,10 @@ class HomeTabState extends State<HomeTab> {
           ],
         ),
       ),
-      // Opción A: FAB expandible para Command Palette
-      floatingActionButton: FloatingActionButton.extended(
+      floatingActionButton: FloatingActionButton(
         onPressed: _abrirQuickAdd,
-        icon: const Icon(Icons.add),
-        label: const Text('Registrar'),
+        tooltip: 'Registrar gasto o ingreso',
+        child: const Icon(Icons.add_rounded),
       ),
     );
   }
