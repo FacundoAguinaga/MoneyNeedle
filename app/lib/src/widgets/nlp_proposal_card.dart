@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../rust/api.dart/api.dart';
+import '../theme/mn_theme.dart';
 import 'mn_card.dart';
 import 'mn_category_icon.dart';
 
@@ -167,7 +168,9 @@ class _NlpProposalCardState extends State<NlpProposalCard> {
                 avatar: Icon(
                   _tipo == 'gasto' ? Icons.arrow_upward : Icons.arrow_downward,
                   size: 16,
-                  color: _tipo == 'gasto' ? Colors.red : Colors.green,
+                  color: _tipo == 'gasto'
+                      ? context.mnColors.expense
+                      : context.mnColors.income,
                 ),
                 label: DropdownButtonHideUnderline(
                   child: DropdownButton<String>(
@@ -283,21 +286,21 @@ class _NlpProposalCardState extends State<NlpProposalCard> {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               decoration: BoxDecoration(
-                color: Colors.orange.withValues(alpha: 0.15),
+                color: context.mnColors.warning.withValues(alpha: 0.15),
                 borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: Colors.orange.withValues(alpha: 0.5)),
+                border: Border.all(color: context.mnColors.warning.withValues(alpha: 0.4)),
               ),
               child: Row(
                 children: [
-                  const Icon(Icons.warning_amber_rounded,
-                      size: 18, color: Colors.orange),
+                  Icon(Icons.warning_amber_rounded,
+                      size: 18, color: context.mnColors.warning),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
                       'El monto no apareció literal en tu frase. Verificá que sea correcto.',
                       style: theme.textTheme.bodySmall?.copyWith(
-                        color: Colors.orange.shade900,
-                        fontWeight: FontWeight.w500,
+                        color: context.mnColors.warning,
+                        fontWeight: FontWeight.w600,
                       ),
                     ),
                   ),

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import '../auth/vault_service.dart';
 import '../rust/api.dart/api.dart';
+import '../theme/mn_theme.dart';
+import '../widgets/mn_card.dart';
 
 class RecurringTab extends StatefulWidget {
   const RecurringTab({super.key});
@@ -130,6 +132,15 @@ class _RecurringTabState extends State<RecurringTab> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colors = context.mnColors;
+
+    final totalMonthly = _rules
+        .where((r) =>
+            r.transactionType.toLowerCase() != 'income' &&
+            r.transactionType.toLowerCase() != 'ingreso')
+        .fold<double>(0.0, (sum, r) => sum + r.amount);
+
     return Scaffold(
       body: _loading
           ? const Center(child: CircularProgressIndicator())
@@ -138,62 +149,72 @@ class _RecurringTabState extends State<RecurringTab> {
               child: ListView(
                 padding: const EdgeInsets.all(16),
                 children: [
-                  Card(
-                    color: Theme.of(context).colorScheme.primaryContainer,
-                    child: Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              Icon(Icons.autorenew, color: Theme.of(context).colorScheme.primary),
-                              const SizedBox(width: 8),
-                              Text(
-                                'Reglas Recurrentes',
-                                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                      fontWeight: FontWeight.bold,
-                                      color: Theme.of(context).colorScheme.onPrimaryContainer,
-                                    ),
+                  // Tarjeta Hero de Compromisos Fijos
+                  MnCard(
+                    padding: const EdgeInsets.all(20),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              'Compromiso Fijo Periódico',
+                              style: theme.textTheme.labelMedium?.copyWith(
+                                color: theme.colorScheme.onSurfaceVariant,
+                                fontWeight: FontWeight.w600,
                               ),
-                            ],
+                            ),
+                            Icon(Icons.autorenew_rounded, color: theme.colorScheme.primary, size: 20),
+                          ],
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          '\$${totalMonthly.toStringAsFixed(2)} / mes',
+                          style: const TextStyle(
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                            letterSpacing: -0.5,
                           ),
-                          const SizedBox(height: 8),
-                          Text(
-                            'Suscripciones y cobros fijos periódicos. Podés procesar los vencimientos pendientes manualmente o dejar que se apliquen en cada inicio de la app.',
-                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                  color: Theme.of(context).colorScheme.onPrimaryContainer,
-                                ),
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          'Suscripciones, servicios y cobros periódicos recurrentes.',
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: theme.colorScheme.onSurfaceVariant,
                           ),
-                          const SizedBox(height: 12),
-                          FilledButton.tonalIcon(
-                            icon: _processing
-                                ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
-                                : const Icon(Icons.play_arrow),
-                            label: const Text('Procesar vencimientos ahora'),
-                            onPressed: _processing ? null : _procesarVencimientos,
-                          ),
-                        ],
-                      ),
+                        ),
+                        const SizedBox(height: 14),
+                        FilledButton.tonalIcon(
+                          icon: _processing
+                              ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
+                              : const Icon(Icons.play_arrow_rounded, size: 18),
+                          label: const Text('Procesar vencimientos ahora'),
+                          onPressed: _processing ? null : _procesarVencimientos,
+                        ),
+                      ],
                     ),
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 20),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
                         'Suscripciones Activas',
-                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                              fontWeight: FontWeight.bold,
-                            ),
+                        style: theme.textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                       Text(
-                        '${_rules.length} reglas',
-                        style: TextStyle(color: Colors.grey.shade600),
+                        '${_rules.length} activas',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 10),
                   if (_rules.isEmpty)
                     const Padding(
                       padding: EdgeInsets.symmetric(vertical: 40),
@@ -205,59 +226,92 @@ class _RecurringTabState extends State<RecurringTab> {
                     ..._rules.map((rule) {
                       final isGasto = rule.transactionType.toLowerCase() == 'expense' ||
                           rule.transactionType.toLowerCase() == 'gasto';
+                      final itemColor = isGasto ? colors.expense : colors.income;
 
-                      return Card(
+                      return MnCard(
                         margin: const EdgeInsets.only(bottom: 10),
-                        shape: RoundedRectangleBorder(
-                          side: BorderSide(color: Colors.grey.shade300),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: ListTile(
-                          leading: CircleAvatar(
-                            backgroundColor: isGasto ? Colors.red.shade100 : Colors.green.shade100,
-                            child: Icon(
-                              isGasto ? Icons.arrow_upward : Icons.arrow_downward,
-                              color: isGasto ? Colors.red : Colors.green,
+                        padding: const EdgeInsets.all(12),
+                        child: Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(10),
+                              decoration: BoxDecoration(
+                                color: itemColor.withValues(alpha: 0.15),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Icon(
+                                isGasto ? Icons.arrow_upward_rounded : Icons.arrow_downward_rounded,
+                                color: itemColor,
+                                size: 18,
+                              ),
                             ),
-                          ),
-                          title: Text(
-                            '${isGasto ? "Gasto" : "Ingreso"} ${rule.currency} \$${rule.amount.toStringAsFixed(2)}',
-                            style: const TextStyle(fontWeight: FontWeight.bold),
-                          ),
-                          subtitle: Text('Cuenta: ${rule.accountName} · Frecuencia: ${_formatFreq(rule.frequency)}'),
-                          trailing: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Chip(
-                                visualDensity: VisualDensity.compact,
-                                label: Text(
-                                  rule.autoApply ? 'Auto' : 'Manual',
-                                  style: TextStyle(
-                                    fontSize: 11,
-                                    color: rule.autoApply ? Colors.green.shade800 : Colors.grey.shade700,
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    '${rule.currency} \$${rule.amount.toStringAsFixed(2)}',
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 15,
+                                    ),
                                   ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    '${rule.accountName} · ${_formatFreq(rule.frequency)}',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: theme.colorScheme.onSurfaceVariant,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                              decoration: BoxDecoration(
+                                color: rule.autoApply
+                                    ? colors.income.withValues(alpha: 0.15)
+                                    : theme.colorScheme.surfaceContainerHighest,
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: Text(
+                                rule.autoApply ? 'Auto' : 'Manual',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.bold,
+                                  color: rule.autoApply
+                                      ? colors.income
+                                      : theme.colorScheme.onSurfaceVariant,
                                 ),
-                                backgroundColor: rule.autoApply ? Colors.green.shade50 : Colors.grey.shade200,
                               ),
-                              IconButton(
-                                icon: const Icon(Icons.delete_outline, color: Colors.grey),
-                                onPressed: () => _eliminarRegla(rule),
+                            ),
+                            const SizedBox(width: 4),
+                            IconButton(
+                              icon: Icon(
+                                Icons.delete_outline_rounded,
+                                size: 20,
+                                color: theme.colorScheme.onSurfaceVariant,
                               ),
-                            ],
-                          ),
+                              tooltip: 'Eliminar regla',
+                              onPressed: () => _eliminarRegla(rule),
+                            ),
+                          ],
                         ),
                       );
                     }),
                 ],
               ),
             ),
-      floatingActionButton: FloatingActionButton.extended(
+      floatingActionButton: FloatingActionButton(
         onPressed: _abrirCrearReglaModal,
-        icon: const Icon(Icons.add),
-        label: const Text('Nueva Recurrente'),
+        tooltip: 'Nueva Recurrente',
+        child: const Icon(Icons.add_rounded),
       ),
     );
   }
+
 }
 
 class _CrearReglaSheet extends StatefulWidget {

@@ -5,13 +5,14 @@ import 'src/auth/unlock_screen.dart';
 import 'src/auth/vault_service.dart';
 import 'src/auth/welcome_screen.dart';
 import 'src/providers/privacy_provider.dart';
+import 'src/providers/theme_provider.dart';
 import 'src/rust/api.dart/frb_generated.dart';
 import 'src/screens/accounts_tab.dart';
 import 'src/screens/home_tab.dart';
-import 'src/screens/recurring_tab.dart';
 import 'src/screens/metrics_tab.dart';
+import 'src/screens/profile_settings_screen.dart';
+import 'src/screens/recurring_tab.dart';
 import 'src/screens/search_screen.dart';
-import 'src/screens/settings_screen.dart';
 import 'src/services/widget_service.dart';
 import 'src/theme/mn_theme.dart';
 
@@ -26,12 +27,18 @@ class MoneyNeedleApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'MoneyNeedle',
-      theme: MnTheme.light(),
-      darkTheme: MnTheme.dark(),
-      themeMode: ThemeMode.system,
-      home: const RootGate(),
+    return ValueListenableBuilder<ThemeMode>(
+      valueListenable: ThemeController.instance,
+      builder: (context, themeMode, _) {
+        return MaterialApp(
+          title: 'MoneyNeedle',
+          theme: MnTheme.light(),
+          darkTheme: MnTheme.dark(),
+          themeMode: themeMode,
+          debugShowCheckedModeBanner: false,
+          home: const RootGate(),
+        );
+      },
     );
   }
 }
@@ -99,12 +106,21 @@ class _RootGateState extends State<RootGate> {
       );
     }
 
-    return const HomePage();
+    return HomePage(
+      onLockVault: () {
+        setState(() {
+          _unlocked = false;
+        });
+      },
+    );
   }
 }
 
 class HomePage extends StatefulWidget {
-  const HomePage({super.key});
+  final VoidCallback? onLockVault;
+
+  const HomePage({super.key, this.onLockVault});
+
   @override
   State<HomePage> createState() => _HomePageState();
 }
@@ -116,8 +132,16 @@ class _HomePageState extends State<HomePage> {
   late final List<Widget> _tabs = [
     HomeTab(key: HomeTab.homeTabKey),
     const AccountsTab(),
-    const RecurringTab(),
     const MetricsTab(),
+    const RecurringTab(),
+    ProfileSettingsScreen(
+      onDataRestored: () {
+        setState(() {
+          _tabsKey = UniqueKey();
+        });
+      },
+      onLockVault: widget.onLockVault,
+    ),
   ];
 
   @override
@@ -143,64 +167,58 @@ class _HomePageState extends State<HomePage> {
   @override
   Widget build(BuildContext context) {
     final titles = [
-      'MoneyNeedle 🌵',
+      'MoneyNeedle',
       'Cuentas y Tarjetas',
+      'Métricas y Finanzas',
       'Suscripciones y Recurrentes',
-      'Analítica y Métricas',
+      'Ajustes y Perfil',
     ];
 
+    final isProfileTab = _currentTabIndex == 4;
+
     return Scaffold(
-      appBar: AppBar(
-        title: Text(titles[_currentTabIndex]),
-        elevation: 0,
-        actions: [
-          ValueListenableBuilder<bool>(
-            valueListenable: PrivacyController.instance,
-            builder: (context, isPrivate, _) {
-              return IconButton(
-                icon: Icon(
-                  isPrivate ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+      appBar: isProfileTab
+          ? null
+          : AppBar(
+              title: Text(titles[_currentTabIndex]),
+              elevation: 0,
+              actions: [
+                ValueListenableBuilder<bool>(
+                  valueListenable: PrivacyController.instance,
+                  builder: (context, isPrivate, _) {
+                    return IconButton(
+                      icon: Icon(
+                        isPrivate ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                      ),
+                      tooltip: isPrivate ? 'Mostrar montos' : 'Ocultar montos',
+                      onPressed: () {
+                        HapticFeedback.selectionClick();
+                        PrivacyController.instance.toggle();
+                      },
+                    );
+                  },
                 ),
-                tooltip: isPrivate ? 'Mostrar montos' : 'Ocultar montos',
-                onPressed: () {
-                  HapticFeedback.selectionClick();
-                  PrivacyController.instance.toggle();
-                },
-              );
-            },
-          ),
-          IconButton(
-            icon: const Icon(Icons.search),
-            tooltip: 'Buscar movimientos',
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const SearchScreen(),
+                IconButton(
+                  icon: const Icon(Icons.search),
+                  tooltip: 'Buscar movimientos',
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const SearchScreen(),
+                      ),
+                    );
+                  },
                 ),
-              );
-            },
-          ),
-          IconButton(
-            icon: const Icon(Icons.settings_outlined),
-            tooltip: 'Ajustes y Respaldos',
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => SettingsScreen(
-                    onDataRestored: () {
-                      setState(() {
-                        _tabsKey = UniqueKey();
-                      });
-                    },
-                  ),
+                IconButton(
+                  icon: const Icon(Icons.account_circle_outlined),
+                  tooltip: 'Mi Perfil',
+                  onPressed: () {
+                    setState(() => _currentTabIndex = 4);
+                  },
                 ),
-              );
-            },
-          ),
-        ],
-      ),
+              ],
+            ),
       body: IndexedStack(
         key: _tabsKey,
         index: _currentTabIndex,
@@ -211,8 +229,8 @@ class _HomePageState extends State<HomePage> {
         onDestinationSelected: (index) => setState(() => _currentTabIndex = index),
         destinations: const [
           NavigationDestination(
-            icon: Icon(Icons.chat_bubble_outline),
-            selectedIcon: Icon(Icons.chat_bubble),
+            icon: Icon(Icons.grid_view_outlined),
+            selectedIcon: Icon(Icons.grid_view_rounded),
             label: 'Inicio',
           ),
           NavigationDestination(
@@ -221,14 +239,19 @@ class _HomePageState extends State<HomePage> {
             label: 'Cuentas',
           ),
           NavigationDestination(
+            icon: Icon(Icons.analytics_outlined),
+            selectedIcon: Icon(Icons.analytics),
+            label: 'Métricas',
+          ),
+          NavigationDestination(
             icon: Icon(Icons.autorenew_outlined),
             selectedIcon: Icon(Icons.autorenew),
             label: 'Recurrentes',
           ),
           NavigationDestination(
-            icon: Icon(Icons.insights_outlined),
-            selectedIcon: Icon(Icons.insights),
-            label: 'Métricas',
+            icon: Icon(Icons.person_outline),
+            selectedIcon: Icon(Icons.person),
+            label: 'Perfil',
           ),
         ],
       ),

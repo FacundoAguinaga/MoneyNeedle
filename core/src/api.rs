@@ -1715,6 +1715,7 @@ mod tests {
         assert_eq!(search_res[0].id, mov_id);
 
         // 3. Editar movimiento
+        let today_str = store::format_epoch_date((store::now_ms() / 1000) as u64);
         let updated = update_movement(
             db_path.clone(),
             mov_id.clone(),
@@ -1723,7 +1724,7 @@ mod tests {
             "ARS".into(),
             "comida".into(),
             "pizza grande".into(),
-            "2026-10-01".into(),
+            today_str,
             Some(acc_id.clone()),
         ).unwrap();
         assert!(updated);

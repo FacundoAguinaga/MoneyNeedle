@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import '../auth/vault_service.dart';
 import '../rust/api.dart/api.dart';
+import '../theme/mn_theme.dart';
+import '../widgets/mn_card.dart';
 
 class AccountsTab extends StatefulWidget {
   const AccountsTab({super.key});
@@ -164,6 +166,8 @@ class _AccountsTabState extends State<AccountsTab> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colors = context.mnColors;
     final netWorthByCurrency = <String, double>{};
     for (final a in _accounts) {
       netWorthByCurrency[a.currency] = (netWorthByCurrency[a.currency] ?? 0.0) + a.currentBalance;
@@ -177,35 +181,37 @@ class _AccountsTabState extends State<AccountsTab> {
               child: ListView(
                 padding: const EdgeInsets.all(16),
                 children: [
-                  Card(
-                    elevation: 1,
-                    color: Theme.of(context).colorScheme.surfaceContainerHighest,
-                    child: Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Patrimonio Total',
-                            style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                                  color: Theme.of(context).colorScheme.onSurfaceVariant,
-                                ),
+                  // Tarjeta Hero de Patrimonio Total
+                  MnCard(
+                    padding: const EdgeInsets.all(20),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Patrimonio Total Consolidado',
+                          style: theme.textTheme.labelMedium?.copyWith(
+                            color: theme.colorScheme.onSurfaceVariant,
+                            fontWeight: FontWeight.w600,
                           ),
-                          const SizedBox(height: 8),
-                          if (netWorthByCurrency.isEmpty)
-                            const Text('\$0.00', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold))
-                          else
-                            ...netWorthByCurrency.entries.map(
-                              (e) => Text(
+                        ),
+                        const SizedBox(height: 8),
+                        if (netWorthByCurrency.isEmpty)
+                          const Text('\$0.00', style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold))
+                        else
+                          ...netWorthByCurrency.entries.map(
+                            (e) => Padding(
+                              padding: const EdgeInsets.only(bottom: 2),
+                              child: Text(
                                 '${e.key} \$${e.value.toStringAsFixed(2)}',
                                 style: const TextStyle(
-                                  fontSize: 22,
+                                  fontSize: 24,
                                   fontWeight: FontWeight.bold,
+                                  letterSpacing: -0.5,
                                 ),
                               ),
                             ),
-                        ],
-                      ),
+                          ),
+                      ],
                     ),
                   ),
                   const SizedBox(height: 12),
@@ -213,7 +219,7 @@ class _AccountsTabState extends State<AccountsTab> {
                     children: [
                       Expanded(
                         child: FilledButton.tonalIcon(
-                          icon: const Icon(Icons.swap_horiz),
+                          icon: const Icon(Icons.swap_horiz_rounded),
                           label: const Text('Transferir'),
                           onPressed: _accounts.length >= 2 ? _abrirTransferenciaModal : null,
                         ),
@@ -221,30 +227,33 @@ class _AccountsTabState extends State<AccountsTab> {
                       const SizedBox(width: 10),
                       Expanded(
                         child: OutlinedButton.icon(
-                          icon: const Icon(Icons.add),
+                          icon: const Icon(Icons.add_rounded),
                           label: const Text('Nueva Cuenta'),
                           onPressed: _abrirCrearCuentaModal,
                         ),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 20),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
                         'Tus Cuentas y Tarjetas',
-                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                              fontWeight: FontWeight.bold,
-                            ),
+                        style: theme.textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                       Text(
                         '${_accounts.length} activas',
-                        style: TextStyle(color: Colors.grey.shade600),
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 10),
                   if (_accounts.isEmpty)
                     const Padding(
                       padding: EdgeInsets.symmetric(vertical: 40),
@@ -257,23 +266,26 @@ class _AccountsTabState extends State<AccountsTab> {
                       final color = _parseColor(acc.color);
                       final isCard = acc.accountType.toLowerCase() == 'credit_card';
 
-                      return Card(
-                        margin: const EdgeInsets.only(bottom: 12),
-                        elevation: 0,
-                        shape: RoundedRectangleBorder(
-                          side: BorderSide(color: Colors.grey.shade300),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Padding(
-                          padding: const EdgeInsets.all(14),
+                      if (isCard) {
+                        final limit = acc.creditLimit ?? 0;
+                        final used = acc.currentBalance.abs();
+                        final ratio = limit > 0 ? (used / limit).clamp(0.0, 1.0) : 0.0;
+
+                        return MnCard(
+                          margin: const EdgeInsets.only(bottom: 14),
+                          padding: const EdgeInsets.all(16),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Row(
                                 children: [
-                                  CircleAvatar(
-                                    backgroundColor: color.withAlpha(38),
-                                    child: Icon(_getIconForType(acc.accountType), color: color),
+                                  Container(
+                                    padding: const EdgeInsets.all(10),
+                                    decoration: BoxDecoration(
+                                      color: color.withValues(alpha: 0.15),
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    child: Icon(Icons.credit_card_rounded, color: color, size: 22),
                                   ),
                                   const SizedBox(width: 12),
                                   Expanded(
@@ -288,29 +300,25 @@ class _AccountsTabState extends State<AccountsTab> {
                                           ),
                                         ),
                                         Text(
-                                          _formatType(acc.accountType),
+                                          'Tarjeta de crédito · ${acc.currency}',
                                           style: TextStyle(
                                             fontSize: 12,
-                                            color: Colors.grey.shade600,
+                                            color: theme.colorScheme.onSurfaceVariant,
                                           ),
                                         ),
                                       ],
                                     ),
                                   ),
-                                  Column(
-                                    crossAxisAlignment: CrossAxisAlignment.end,
-                                    children: [
-                                      Text(
-                                        '${acc.currency} \$${acc.currentBalance.toStringAsFixed(2)}',
-                                        style: TextStyle(
-                                          fontSize: 16,
-                                          fontWeight: FontWeight.bold,
-                                          color: acc.currentBalance < 0 ? Colors.red.shade700 : null,
-                                        ),
-                                      ),
-                                    ],
+                                  Text(
+                                    '${acc.currency} \$${acc.currentBalance.toStringAsFixed(2)}',
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
+                                      color: acc.currentBalance < 0 ? colors.expense : null,
+                                    ),
                                   ),
                                   PopupMenuButton<String>(
+                                    icon: Icon(Icons.more_vert, size: 20, color: theme.colorScheme.onSurfaceVariant),
                                     onSelected: (val) {
                                       if (val == 'delete') _eliminarCuenta(acc);
                                     },
@@ -329,53 +337,156 @@ class _AccountsTabState extends State<AccountsTab> {
                                   ),
                                 ],
                               ),
-                              if (isCard) ...[
-                                const Divider(height: 20),
+                              if (limit > 0) ...[
+                                const SizedBox(height: 14),
                                 Row(
                                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                   children: [
-                                    if (acc.creditLimit != null)
-                                      Text(
-                                        'Límite: \$${acc.creditLimit!.toStringAsFixed(0)}',
-                                        style: const TextStyle(fontSize: 12),
+                                    Text(
+                                      'Consumo: \$${used.toStringAsFixed(0)} / \$${limit.toStringAsFixed(0)}',
+                                      style: TextStyle(fontSize: 11, color: theme.colorScheme.onSurfaceVariant),
+                                    ),
+                                    Text(
+                                      '${(ratio * 100).toStringAsFixed(0)}%',
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.bold,
+                                        color: ratio > 0.8 ? colors.expense : theme.colorScheme.primary,
                                       ),
-                                    if (acc.closingDay != null)
-                                      Text(
-                                        'Cierre: día ${acc.closingDay}',
-                                        style: const TextStyle(fontSize: 12),
-                                      ),
-                                    if (acc.dueDay != null)
-                                      Text(
-                                        'Vence: día ${acc.dueDay}',
-                                        style: const TextStyle(fontSize: 12),
-                                      ),
+                                    ),
                                   ],
                                 ),
-                                const SizedBox(height: 8),
-                                Align(
-                                  alignment: Alignment.centerRight,
-                                  child: OutlinedButton.icon(
-                                    icon: const Icon(Icons.receipt_long, size: 16),
-                                    label: const Text('Ver cuotas y resumen'),
-                                    onPressed: () => _verResumenTarjeta(acc),
+                                const SizedBox(height: 6),
+                                ClipRRect(
+                                  borderRadius: BorderRadius.circular(4),
+                                  child: LinearProgressIndicator(
+                                    value: ratio,
+                                    minHeight: 6,
+                                    backgroundColor: theme.colorScheme.surfaceContainerHighest,
+                                    valueColor: AlwaysStoppedAnimation<Color>(
+                                      ratio > 0.8 ? colors.expense : theme.colorScheme.primary,
+                                    ),
                                   ),
                                 ),
                               ],
+                              const SizedBox(height: 12),
+                              Row(
+                                children: [
+                                  if (acc.closingDay != null)
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                      margin: const EdgeInsets.only(right: 6),
+                                      decoration: BoxDecoration(
+                                        color: theme.colorScheme.surfaceContainerHighest,
+                                        borderRadius: BorderRadius.circular(6),
+                                      ),
+                                      child: Text(
+                                        'Cierre: día ${acc.closingDay}',
+                                        style: TextStyle(fontSize: 11, color: theme.colorScheme.onSurfaceVariant),
+                                      ),
+                                    ),
+                                  if (acc.dueDay != null)
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                      margin: const EdgeInsets.only(right: 6),
+                                      decoration: BoxDecoration(
+                                        color: theme.colorScheme.surfaceContainerHighest,
+                                        borderRadius: BorderRadius.circular(6),
+                                      ),
+                                      child: Text(
+                                        'Vence: día ${acc.dueDay}',
+                                        style: TextStyle(fontSize: 11, color: theme.colorScheme.onSurfaceVariant),
+                                      ),
+                                    ),
+                                  const Spacer(),
+                                  TextButton.icon(
+                                    icon: const Icon(Icons.receipt_long_rounded, size: 16),
+                                    label: const Text('Resumen y cuotas', style: TextStyle(fontSize: 12)),
+                                    onPressed: () => _verResumenTarjeta(acc),
+                                  ),
+                                ],
+                              ),
                             ],
                           ),
+                        );
+                      }
+
+                      return MnCard(
+                        margin: const EdgeInsets.only(bottom: 10),
+                        padding: const EdgeInsets.all(14),
+                        child: Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(10),
+                              decoration: BoxDecoration(
+                                color: color.withValues(alpha: 0.15),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Icon(_getIconForType(acc.accountType), color: color, size: 20),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    acc.name,
+                                    style: const TextStyle(
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                  Text(
+                                    '${_formatType(acc.accountType)} · ${acc.currency}',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: theme.colorScheme.onSurfaceVariant,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            Text(
+                              '${acc.currency} \$${acc.currentBalance.toStringAsFixed(2)}',
+                              style: TextStyle(
+                                fontSize: 15,
+                                fontWeight: FontWeight.bold,
+                                color: acc.currentBalance < 0 ? colors.expense : null,
+                              ),
+                            ),
+                            PopupMenuButton<String>(
+                              icon: Icon(Icons.more_vert, size: 20, color: theme.colorScheme.onSurfaceVariant),
+                              onSelected: (val) {
+                                if (val == 'delete') _eliminarCuenta(acc);
+                              },
+                              itemBuilder: (ctx) => [
+                                const PopupMenuItem(
+                                  value: 'delete',
+                                  child: Row(
+                                    children: [
+                                      Icon(Icons.delete_outline, color: Colors.red, size: 20),
+                                      SizedBox(width: 8),
+                                      Text('Eliminar', style: TextStyle(color: Colors.red)),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
                         ),
                       );
                     }),
                 ],
               ),
             ),
-      floatingActionButton: FloatingActionButton.extended(
+      floatingActionButton: FloatingActionButton(
         onPressed: _abrirCrearCuentaModal,
-        icon: const Icon(Icons.add),
-        label: const Text('Nueva Cuenta'),
+        tooltip: 'Nueva Cuenta',
+        child: const Icon(Icons.add_rounded),
       ),
     );
   }
+
 }
 
 class _CrearCuentaSheet extends StatefulWidget {
@@ -1024,17 +1135,24 @@ class _TransferSheetState extends State<_TransferSheet> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                 decoration: BoxDecoration(
-                  color: Colors.blue.shade50,
+                  color: Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.3),
                   borderRadius: BorderRadius.circular(8),
+                  border: Border.all(
+                    color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.3),
+                  ),
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(Icons.currency_exchange, size: 16, color: Colors.blue.shade800),
+                    Icon(Icons.currency_exchange, size: 16, color: Theme.of(context).colorScheme.primary),
                     const SizedBox(width: 6),
                     Text(
                       'Cotización implícita: $implicitRateStr',
-                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.blue.shade800),
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        color: Theme.of(context).colorScheme.primary,
+                      ),
                     ),
                   ],
                 ),

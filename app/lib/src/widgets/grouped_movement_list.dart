@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../rust/api.dart/api.dart';
 import 'mn_amount_text.dart';
+import 'mn_card.dart';
 import 'mn_empty_state.dart';
 import 'movement_list_item.dart';
 
@@ -113,49 +114,46 @@ class GroupedMovementList extends StatelessWidget {
                 ],
               ),
             ),
-            Card(
+            MnCard(
               margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-              elevation: 0,
-              shape: RoundedRectangleBorder(
+              padding: EdgeInsets.zero,
+              child: ClipRRect(
                 borderRadius: BorderRadius.circular(16),
-                side: BorderSide(
-                  color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.5),
-                ),
-              ),
-              child: ListView.separated(
-                physics: const NeverScrollableScrollPhysics(),
-                shrinkWrap: true,
-                itemCount: dayMovements.length,
-                separatorBuilder: (context, _) => Divider(
-                  height: 1,
-                  indent: 64,
-                  color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.4),
-                ),
-                itemBuilder: (context, itemIndex) {
-                  final mov = dayMovements[itemIndex];
-                  final itemWidget = MovementListItem(
-                    movement: mov,
-                    onTap: onItemTap != null ? () => onItemTap!(mov) : null,
-                  );
+                child: ListView.separated(
+                  physics: const NeverScrollableScrollPhysics(),
+                  shrinkWrap: true,
+                  itemCount: dayMovements.length,
+                  separatorBuilder: (context, _) => Divider(
+                    height: 1,
+                    indent: 64,
+                    color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.4),
+                  ),
+                  itemBuilder: (context, itemIndex) {
+                    final mov = dayMovements[itemIndex];
+                    final itemWidget = MovementListItem(
+                      movement: mov,
+                      onTap: onItemTap != null ? () => onItemTap!(mov) : null,
+                    );
 
-                  if (onItemDismissed == null) return itemWidget;
+                    if (onItemDismissed == null) return itemWidget;
 
-                  return Dismissible(
-                    key: ValueKey('movement_${mov.id}'),
-                    direction: DismissDirection.endToStart,
-                    background: Container(
-                      alignment: Alignment.centerRight,
-                      padding: const EdgeInsets.only(right: 20),
-                      color: Theme.of(context).colorScheme.error,
-                      child: const Icon(Icons.delete_outline, color: Colors.white),
-                    ),
-                    onDismissed: (_) {
-                      HapticFeedback.heavyImpact();
-                      onItemDismissed!(mov);
-                    },
-                    child: itemWidget,
-                  );
-                },
+                    return Dismissible(
+                      key: ValueKey('movement_${mov.id}'),
+                      direction: DismissDirection.endToStart,
+                      background: Container(
+                        alignment: Alignment.centerRight,
+                        padding: const EdgeInsets.only(right: 20),
+                        color: Theme.of(context).colorScheme.error,
+                        child: const Icon(Icons.delete_outline, color: Colors.white),
+                      ),
+                      onDismissed: (_) {
+                        HapticFeedback.heavyImpact();
+                        onItemDismissed!(mov);
+                      },
+                      child: itemWidget,
+                    );
+                  },
+                ),
               ),
             ),
           ],
