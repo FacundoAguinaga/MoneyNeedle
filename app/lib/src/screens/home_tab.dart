@@ -340,11 +340,14 @@ class HomeTabState extends State<HomeTab> {
                           children: [
                             Icon(Icons.arrow_downward_rounded, size: 14, color: colors.income),
                             const SizedBox(width: 4),
-                            Text(
-                              'Ingresos mes',
-                              style: theme.textTheme.labelSmall?.copyWith(
-                                color: theme.colorScheme.onSurfaceVariant,
-                                fontWeight: FontWeight.w500,
+                            Flexible(
+                              child: Text(
+                                'Ingresos mes',
+                                style: theme.textTheme.labelSmall?.copyWith(
+                                  color: theme.colorScheme.onSurfaceVariant,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                                overflow: TextOverflow.ellipsis,
                               ),
                             ),
                           ],
@@ -378,18 +381,29 @@ class HomeTabState extends State<HomeTab> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Icon(Icons.arrow_upward_rounded, size: 14, color: colors.expense),
-                            const SizedBox(width: 4),
-                            Text(
-                              'Gastos mes',
-                              style: theme.textTheme.labelSmall?.copyWith(
-                                color: theme.colorScheme.onSurfaceVariant,
-                                fontWeight: FontWeight.w500,
+                            Flexible(
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(Icons.arrow_upward_rounded, size: 14, color: colors.expense),
+                                  const SizedBox(width: 4),
+                                  Flexible(
+                                    child: Text(
+                                      'Gastos mes',
+                                      style: theme.textTheme.labelSmall?.copyWith(
+                                        color: theme.colorScheme.onSurfaceVariant,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
                             if (delta != null) ...[
-                              const Spacer(),
+                              const SizedBox(width: 4),
                               Text(
                                 '${delta >= 0 ? '+' : ''}${delta.toStringAsFixed(0)}%',
                                 style: TextStyle(
@@ -461,18 +475,24 @@ class HomeTabState extends State<HomeTab> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Row(
-                  children: [
-                    Icon(Icons.pie_chart_outline, size: 16, color: barColor),
-                    const SizedBox(width: 6),
-                    Text(
-                      'Presupuesto mensual',
-                      style: theme.textTheme.labelMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
+                Expanded(
+                  child: Row(
+                    children: [
+                      Icon(Icons.pie_chart_outline, size: 16, color: barColor),
+                      const SizedBox(width: 6),
+                      Flexible(
+                        child: Text(
+                          'Presupuesto mensual',
+                          style: theme.textTheme.labelMedium?.copyWith(
+                            fontWeight: FontWeight.bold,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
+                const SizedBox(width: 8),
                 Text(
                   '${ratioPct.toStringAsFixed(0)}%',
                   style: TextStyle(
@@ -497,13 +517,17 @@ class HomeTabState extends State<HomeTab> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(
-                  'Gastaste ${MnAmountText.format(totalSpent, currency: 'ARS', includeDecimals: false)} de ${MnAmountText.format(totalBudget, currency: 'ARS', includeDecimals: false)}',
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: theme.colorScheme.onSurfaceVariant,
-                    fontSize: 11,
+                Expanded(
+                  child: Text(
+                    'Gastaste ${MnAmountText.format(totalSpent, currency: 'ARS', includeDecimals: false)} de ${MnAmountText.format(totalBudget, currency: 'ARS', includeDecimals: false)}',
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                      fontSize: 11,
+                    ),
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
+                const SizedBox(width: 8),
                 Icon(Icons.chevron_right, size: 16, color: theme.colorScheme.outline),
               ],
             ),

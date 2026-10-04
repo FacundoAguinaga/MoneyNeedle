@@ -352,15 +352,23 @@ class _SavingGoalsScreenState extends State<SavingGoalsScreen> {
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Text(
-                              'Ahorrado: ${_formatAmount(g.currentAmount)} (${g.progressPercentage.toStringAsFixed(1)}%)',
-                              style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 12),
+                            Expanded(
+                              child: Text(
+                                'Ahorrado: ${_formatAmount(g.currentAmount)} (${g.progressPercentage.toStringAsFixed(1)}%)',
+                                style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 12),
+                                overflow: TextOverflow.ellipsis,
+                              ),
                             ),
-                            Text(
-                              isCompleted ? '¡Meta alcanzada!' : 'Faltan: ${_formatAmount(remaining)}',
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: isCompleted ? context.mnColors.income : theme.colorScheme.onSurfaceVariant,
+                            const SizedBox(width: 8),
+                            Flexible(
+                              child: Text(
+                                isCompleted ? '¡Meta alcanzada!' : 'Faltan: ${_formatAmount(remaining)}',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: isCompleted ? context.mnColors.income : theme.colorScheme.onSurfaceVariant,
+                                ),
+                                overflow: TextOverflow.ellipsis,
+                                textAlign: TextAlign.end,
                               ),
                             ),
                           ],

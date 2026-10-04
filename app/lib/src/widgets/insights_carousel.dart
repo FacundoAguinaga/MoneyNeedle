@@ -29,7 +29,7 @@ class _InsightsCarouselState extends State<InsightsCarousel> {
     return Column(
       children: [
         SizedBox(
-          height: 155,
+          height: 180,
           child: PageView.builder(
             controller: _pageController,
             itemCount: widget.insights.length,
