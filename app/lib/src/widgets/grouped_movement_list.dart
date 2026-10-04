@@ -12,6 +12,8 @@ class GroupedMovementList extends StatelessWidget {
   final Function(MovementDto)? onItemTap;
   final Function(MovementDto)? onItemDismissed;
   final VoidCallback? onEmptyAction;
+  final ScrollController? controller;
+  final Widget? footer;
 
   const GroupedMovementList({
     super.key,
@@ -19,6 +21,8 @@ class GroupedMovementList extends StatelessWidget {
     this.onItemTap,
     this.onItemDismissed,
     this.onEmptyAction,
+    this.controller,
+    this.footer,
   });
 
   String _formatDateHeader(String rawDate) {
@@ -72,9 +76,13 @@ class GroupedMovementList extends StatelessWidget {
     final dateKeys = grouped.keys.toList();
 
     return ListView.builder(
+      controller: controller,
       physics: const AlwaysScrollableScrollPhysics(),
-      itemCount: dateKeys.length,
+      itemCount: dateKeys.length + (footer != null ? 1 : 0),
       itemBuilder: (context, groupIndex) {
+        if (groupIndex == dateKeys.length) {
+          return footer!;
+        }
         final dateKey = dateKeys[groupIndex];
         final dayMovements = grouped[dateKey]!;
 

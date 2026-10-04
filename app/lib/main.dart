@@ -7,12 +7,10 @@ import 'src/auth/welcome_screen.dart';
 import 'src/providers/privacy_provider.dart';
 import 'src/providers/theme_provider.dart';
 import 'src/rust/api.dart/frb_generated.dart';
-import 'src/screens/accounts_tab.dart';
 import 'src/screens/home_tab.dart';
 import 'src/screens/metrics_tab.dart';
-import 'src/screens/profile_settings_screen.dart';
-import 'src/screens/recurring_tab.dart';
-import 'src/screens/search_screen.dart';
+import 'src/screens/more_hub.dart';
+import 'src/screens/movements_tab.dart';
 import 'src/services/widget_service.dart';
 import 'src/theme/mn_theme.dart';
 
@@ -130,11 +128,18 @@ class _HomePageState extends State<HomePage> {
   Key _tabsKey = UniqueKey();
 
   late final List<Widget> _tabs = [
-    HomeTab(key: HomeTab.homeTabKey),
-    const AccountsTab(),
+    HomeTab(
+      key: HomeTab.homeTabKey,
+      onViewAllMovements: () {
+        setState(() => _currentTabIndex = 1);
+      },
+    ),
+    MovementsTab(
+      key: MovementsTab.movementsTabKey,
+      onQuickAdd: _abrirQuickAdd,
+    ),
     const MetricsTab(),
-    const RecurringTab(),
-    ProfileSettingsScreen(
+    MoreHub(
       onDataRestored: () {
         setState(() {
           _tabsKey = UniqueKey();
@@ -157,8 +162,14 @@ class _HomePageState extends State<HomePage> {
   }
 
   void _onWidgetQuickAdd() {
+    _abrirQuickAdd();
+  }
+
+  void _abrirQuickAdd() {
     if (!mounted) return;
-    setState(() => _currentTabIndex = 0);
+    if (_currentTabIndex != 0) {
+      setState(() => _currentTabIndex = 0);
+    }
     WidgetsBinding.instance.addPostFrameCallback((_) {
       HomeTab.homeTabKey.currentState?.abrirQuickAdd();
     });
@@ -168,62 +179,48 @@ class _HomePageState extends State<HomePage> {
   Widget build(BuildContext context) {
     final titles = [
       'MoneyNeedle',
-      'Cuentas y Tarjetas',
-      'Métricas y Finanzas',
-      'Suscripciones y Recurrentes',
-      'Ajustes y Perfil',
+      'Movimientos',
+      'Análisis',
+      'Más',
     ];
 
-    final isProfileTab = _currentTabIndex == 4;
+    // Mostrar FAB unificado únicamente en Inicio y Movimientos
+    final showFab = _currentTabIndex == 0 || _currentTabIndex == 1;
 
     return Scaffold(
-      appBar: isProfileTab
-          ? null
-          : AppBar(
-              title: Text(titles[_currentTabIndex]),
-              elevation: 0,
-              actions: [
-                ValueListenableBuilder<bool>(
-                  valueListenable: PrivacyController.instance,
-                  builder: (context, isPrivate, _) {
-                    return IconButton(
-                      icon: Icon(
-                        isPrivate ? Icons.visibility_off_outlined : Icons.visibility_outlined,
-                      ),
-                      tooltip: isPrivate ? 'Mostrar montos' : 'Ocultar montos',
-                      onPressed: () {
-                        HapticFeedback.selectionClick();
-                        PrivacyController.instance.toggle();
-                      },
-                    );
-                  },
+      appBar: AppBar(
+        title: Text(titles[_currentTabIndex]),
+        elevation: 0,
+        actions: [
+          ValueListenableBuilder<bool>(
+            valueListenable: PrivacyController.instance,
+            builder: (context, isPrivate, _) {
+              return IconButton(
+                icon: Icon(
+                  isPrivate ? Icons.visibility_off_outlined : Icons.visibility_outlined,
                 ),
-                IconButton(
-                  icon: const Icon(Icons.search),
-                  tooltip: 'Buscar movimientos',
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const SearchScreen(),
-                      ),
-                    );
-                  },
-                ),
-                IconButton(
-                  icon: const Icon(Icons.account_circle_outlined),
-                  tooltip: 'Mi Perfil',
-                  onPressed: () {
-                    setState(() => _currentTabIndex = 4);
-                  },
-                ),
-              ],
-            ),
+                tooltip: isPrivate ? 'Mostrar montos' : 'Ocultar montos',
+                onPressed: () {
+                  HapticFeedback.selectionClick();
+                  PrivacyController.instance.toggle();
+                },
+              );
+            },
+          ),
+        ],
+      ),
       body: IndexedStack(
         key: _tabsKey,
         index: _currentTabIndex,
         children: _tabs,
       ),
+      floatingActionButton: showFab
+          ? FloatingActionButton(
+              onPressed: _abrirQuickAdd,
+              tooltip: 'Registrar movimiento',
+              child: const Icon(Icons.add_rounded),
+            )
+          : null,
       bottomNavigationBar: NavigationBar(
         selectedIndex: _currentTabIndex,
         onDestinationSelected: (index) => setState(() => _currentTabIndex = index),
@@ -234,24 +231,19 @@ class _HomePageState extends State<HomePage> {
             label: 'Inicio',
           ),
           NavigationDestination(
-            icon: Icon(Icons.account_balance_wallet_outlined),
-            selectedIcon: Icon(Icons.account_balance_wallet),
-            label: 'Cuentas',
+            icon: Icon(Icons.receipt_long_outlined),
+            selectedIcon: Icon(Icons.receipt_long_rounded),
+            label: 'Movimientos',
           ),
           NavigationDestination(
             icon: Icon(Icons.analytics_outlined),
-            selectedIcon: Icon(Icons.analytics),
-            label: 'Métricas',
+            selectedIcon: Icon(Icons.analytics_rounded),
+            label: 'Análisis',
           ),
           NavigationDestination(
-            icon: Icon(Icons.autorenew_outlined),
-            selectedIcon: Icon(Icons.autorenew),
-            label: 'Recurrentes',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.person_outline),
-            selectedIcon: Icon(Icons.person),
-            label: 'Perfil',
+            icon: Icon(Icons.menu_rounded),
+            selectedIcon: Icon(Icons.menu_open_rounded),
+            label: 'Más',
           ),
         ],
       ),
