@@ -6,7 +6,7 @@ Leé `CONTEXT.md` primero. Acá van las reglas que salieron de romper cosas.
 
 - Español rioplatense, voseo, conciso. Nada de superlativos ni emojis.
 - Responder con hechos verificados (correr código, no suponer).
-- Preguntar antes de: cambiar etiquetas del dataset, entrenar (>30 min GPU),
+- Preguntar antes de: mergear a main (esperar confirmación explícita del usuario de que el trabajo de esa función o rama terminó), cambiar etiquetas del dataset, entrenar (>30 min GPU),
   borrar archivos.
 
 ## Entorno (fish + uv, NO estándar)
@@ -60,11 +60,13 @@ Leé `CONTEXT.md` primero. Acá van las reglas que salieron de romper cosas.
   - Conventional Commits (`feat:`, `fix:`, `refactor:`, `test:`, `docs:`, `chore:`).
   - Mensajes concisos en español o inglés técnico, explicando el *qué* y el *por qué*
     si no es obvio. Cero commits tipo "wip", "cambios", "fix test".
-- **Calidad antes de mergear/PR**:
+- **Calidad y confirmación antes de mergear/PR**:
   - `cargo test` debe compilar y pasar sin errores ni warnings críticos si se tocó `core/`.
   - `.venv/bin/python -m unittest` debe pasar si se tocó `prototype/`.
+  - `fvm flutter analyze` y tests de Flutter deben pasar limpios si se tocó `app/`.
   - Prohibido dejar archivos temporales, dumps de debug o archivos sin trackear no deseados.
-- **Push y PRs**: Permitido pushear ramas de trabajo y crear/mergear PRs a `main` si todos los checks y tests pasan limpiamente.
+  - **Confirmación del usuario obligatoria**: el usuario DEBE confirmar explícitamente que el trabajo de esa función o rama terminó y cumple lo esperado antes de proceder al merge a `main`.
+- **Push y PRs**: Permitido pushear ramas de trabajo y abrir PRs. **PROHIBIDO mergear a `main` sin la confirmación explícita del usuario** de que la tarea o función está completada.
 
 ## Código
 
