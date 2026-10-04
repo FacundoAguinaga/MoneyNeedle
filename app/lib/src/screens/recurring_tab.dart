@@ -5,7 +5,8 @@ import '../theme/mn_theme.dart';
 import '../widgets/mn_card.dart';
 
 class RecurringTab extends StatefulWidget {
-  const RecurringTab({super.key});
+  final bool isStandalone;
+  const RecurringTab({super.key, this.isStandalone = false});
 
   @override
   State<RecurringTab> createState() => _RecurringTabState();
@@ -142,6 +143,12 @@ class _RecurringTabState extends State<RecurringTab> {
         .fold<double>(0.0, (sum, r) => sum + r.amount);
 
     return Scaffold(
+      appBar: widget.isStandalone
+          ? AppBar(
+              title: const Text('Suscripciones y Recurrentes'),
+              elevation: 0,
+            )
+          : null,
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : RefreshIndicator(

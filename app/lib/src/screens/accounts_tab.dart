@@ -5,7 +5,8 @@ import '../theme/mn_theme.dart';
 import '../widgets/mn_card.dart';
 
 class AccountsTab extends StatefulWidget {
-  const AccountsTab({super.key});
+  final bool isStandalone;
+  const AccountsTab({super.key, this.isStandalone = false});
 
   @override
   State<AccountsTab> createState() => _AccountsTabState();
@@ -174,6 +175,12 @@ class _AccountsTabState extends State<AccountsTab> {
     }
 
     return Scaffold(
+      appBar: widget.isStandalone
+          ? AppBar(
+              title: const Text('Cuentas y Tarjetas'),
+              elevation: 0,
+            )
+          : null,
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : RefreshIndicator(
