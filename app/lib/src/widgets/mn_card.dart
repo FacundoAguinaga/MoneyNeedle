@@ -31,30 +31,35 @@ class MnCard extends StatelessWidget {
       width: 1,
     );
 
-    final card = Container(
-      margin: margin,
-      decoration: BoxDecoration(
-        color: backgroundColor ?? colorScheme.surface,
-        borderRadius: BorderRadius.circular(borderRadius),
-        border: Border.fromBorderSide(border),
-      ),
-      child: Padding(
-        padding: padding,
-        child: child,
-      ),
+    final shape = RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(borderRadius),
+      side: border,
     );
 
-    if (onTap != null) {
-      return Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(borderRadius),
-          child: card,
-        ),
-      );
+    final cardColor = backgroundColor ?? colorScheme.surface;
+
+    Widget content = Material(
+      color: cardColor,
+      shape: shape,
+      clipBehavior: Clip.antiAlias,
+      child: onTap != null
+          ? InkWell(
+              onTap: onTap,
+              child: Padding(
+                padding: padding,
+                child: child,
+              ),
+            )
+          : Padding(
+              padding: padding,
+              child: child,
+            ),
+    );
+
+    if (margin != null) {
+      content = Padding(padding: margin!, child: content);
     }
 
-    return card;
+    return content;
   }
 }

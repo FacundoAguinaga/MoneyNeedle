@@ -305,6 +305,8 @@ class _AccountsTabState extends State<AccountsTab> {
                                             fontSize: 16,
                                             fontWeight: FontWeight.bold,
                                           ),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
                                         ),
                                         Text(
                                           'Tarjeta de crédito · ${acc.currency}',
@@ -312,10 +314,13 @@ class _AccountsTabState extends State<AccountsTab> {
                                             fontSize: 12,
                                             color: theme.colorScheme.onSurfaceVariant,
                                           ),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
                                         ),
                                       ],
                                     ),
                                   ),
+                                  const SizedBox(width: 8),
                                   Text(
                                     '${acc.currency} \$${acc.currentBalance.toStringAsFixed(2)}',
                                     style: TextStyle(
@@ -377,7 +382,11 @@ class _AccountsTabState extends State<AccountsTab> {
                                 ),
                               ],
                               const SizedBox(height: 12),
-                              Row(
+                              Wrap(
+                                spacing: 8,
+                                runSpacing: 4,
+                                alignment: WrapAlignment.spaceBetween,
+                                crossAxisAlignment: WrapCrossAlignment.center,
                                 children: [
                                   if (acc.closingDay != null)
                                     Container(
@@ -405,8 +414,11 @@ class _AccountsTabState extends State<AccountsTab> {
                                         style: TextStyle(fontSize: 11, color: theme.colorScheme.onSurfaceVariant),
                                       ),
                                     ),
-                                  const Spacer(),
                                   TextButton.icon(
+                                    style: TextButton.styleFrom(
+                                      visualDensity: VisualDensity.compact,
+                                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                                    ),
                                     icon: const Icon(Icons.receipt_long_rounded, size: 16),
                                     label: const Text('Resumen y cuotas', style: TextStyle(fontSize: 12)),
                                     onPressed: () => _verResumenTarjeta(acc),
@@ -442,6 +454,8 @@ class _AccountsTabState extends State<AccountsTab> {
                                       fontSize: 15,
                                       fontWeight: FontWeight.bold,
                                     ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
                                   ),
                                   Text(
                                     '${_formatType(acc.accountType)} · ${acc.currency}',
@@ -449,10 +463,13 @@ class _AccountsTabState extends State<AccountsTab> {
                                       fontSize: 12,
                                       color: theme.colorScheme.onSurfaceVariant,
                                     ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
                                   ),
                                 ],
                               ),
                             ),
+                            const SizedBox(width: 8),
                             Text(
                               '${acc.currency} \$${acc.currentBalance.toStringAsFixed(2)}',
                               style: TextStyle(
@@ -852,7 +869,14 @@ class _CardStatementSheetState extends State<_CardStatementSheet> {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Text('Total a pagar del mes:', style: TextStyle(fontSize: 16)),
+                  const Expanded(
+                    child: Text(
+                      'Total a pagar del mes:',
+                      style: TextStyle(fontSize: 16),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
                   Text(
                     '${widget.card.currency} \$${_statement!.totalDue.toStringAsFixed(2)}',
                     style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.red),

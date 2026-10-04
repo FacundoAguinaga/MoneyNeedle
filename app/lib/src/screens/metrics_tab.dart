@@ -427,11 +427,15 @@ class _MetricsTabState extends State<MetricsTab> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                'Gastos por Categoría',
-                style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+              Expanded(
+                child: Text(
+                  'Gastos por Categoría',
+                  style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
-              if (hasData)
+              if (hasData) ...[
+                const SizedBox(width: 8),
                 Text(
                   _formatAmount(_categoryReport!.totalAmount),
                   style: theme.textTheme.bodyMedium?.copyWith(
@@ -439,6 +443,7 @@ class _MetricsTabState extends State<MetricsTab> {
                     color: context.mnColors.expense,
                   ),
                 ),
+              ],
             ],
           ),
           const SizedBox(height: 16),
@@ -589,11 +594,16 @@ class _MetricsTabState extends State<MetricsTab> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                'Flujo de Caja Mensual',
-                style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+              Expanded(
+                child: Text(
+                  'Flujo de Caja Mensual',
+                  style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
+              const SizedBox(width: 8),
               Row(
+                mainAxisSize: MainAxisSize.min,
                 children: [
                   _buildLegendDot(colors.income, 'Ingresos'),
                   const SizedBox(width: 8),
@@ -752,9 +762,12 @@ class _MetricsTabState extends State<MetricsTab> {
               children: [
                 Icon(Icons.credit_card, size: 20, color: theme.colorScheme.primary),
                 const SizedBox(width: 8),
-                Text(
-                  'Cuotas Pendientes a Vencer',
-                  style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+                Expanded(
+                  child: Text(
+                    'Cuotas Pendientes a Vencer',
+                    style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+                    overflow: TextOverflow.ellipsis,
+                  ),
                 ),
               ],
             ),
@@ -793,39 +806,48 @@ class _MetricsTabState extends State<MetricsTab> {
                   return Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.all(8),
-                            decoration: BoxDecoration(
-                              color: theme.colorScheme.primaryContainer.withValues(alpha: 0.5),
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Icon(
-                              Icons.calendar_month,
-                              size: 18,
-                              color: theme.colorScheme.primary,
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                '$monthStr ${c.cycleYear}',
-                                style: const TextStyle(fontWeight: FontWeight.w600),
+                      Expanded(
+                        child: Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: theme.colorScheme.primaryContainer.withValues(alpha: 0.5),
+                                borderRadius: BorderRadius.circular(8),
                               ),
-                              Text(
-                                '${c.count} ${c.count == 1 ? "cuota" : "cuotas"}',
-                                style: theme.textTheme.bodySmall?.copyWith(
-                                  color: theme.colorScheme.onSurfaceVariant,
-                                  fontSize: 11,
-                                ),
+                              child: Icon(
+                                Icons.calendar_month,
+                                size: 18,
+                                color: theme.colorScheme.primary,
                               ),
-                            ],
-                          ),
-                        ],
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    '$monthStr ${c.cycleYear}',
+                                    style: const TextStyle(fontWeight: FontWeight.w600),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                  Text(
+                                    '${c.count} ${c.count == 1 ? "cuota" : "cuotas"}',
+                                    style: theme.textTheme.bodySmall?.copyWith(
+                                      color: theme.colorScheme.onSurfaceVariant,
+                                      fontSize: 11,
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
+                      const SizedBox(width: 8),
                       Text(
                         _formatAmount(c.totalAmount),
                         style: TextStyle(

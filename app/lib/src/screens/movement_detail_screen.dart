@@ -375,27 +375,45 @@ class _MovementDetailScreenState extends State<MovementDetailScreen> {
                       ListTile(
                         leading: const Icon(Icons.category_outlined),
                         title: const Text('Categoría'),
-                        trailing: Text(
-                          _movement.categoria.isNotEmpty ? _movement.categoria : 'Sin categoría',
-                          style: const TextStyle(fontWeight: FontWeight.w600),
+                        trailing: ConstrainedBox(
+                          constraints: const BoxConstraints(maxWidth: 180),
+                          child: Text(
+                            _movement.categoria.isNotEmpty ? _movement.categoria : 'Sin categoría',
+                            style: const TextStyle(fontWeight: FontWeight.w600),
+                            overflow: TextOverflow.ellipsis,
+                            maxLines: 1,
+                            textAlign: TextAlign.end,
+                          ),
                         ),
                       ),
                       const Divider(height: 1, indent: 56),
                       ListTile(
                         leading: const Icon(Icons.account_balance_outlined),
                         title: const Text('Cuenta'),
-                        trailing: Text(
-                          _movement.accountName ?? 'No especificada',
-                          style: const TextStyle(fontWeight: FontWeight.w600),
+                        trailing: ConstrainedBox(
+                          constraints: const BoxConstraints(maxWidth: 180),
+                          child: Text(
+                            _movement.accountName ?? 'No especificada',
+                            style: const TextStyle(fontWeight: FontWeight.w600),
+                            overflow: TextOverflow.ellipsis,
+                            maxLines: 1,
+                            textAlign: TextAlign.end,
+                          ),
                         ),
                       ),
                       const Divider(height: 1, indent: 56),
                       ListTile(
                         leading: const Icon(Icons.calendar_today_outlined),
                         title: const Text('Fecha'),
-                        trailing: Text(
-                          _movement.fecha,
-                          style: const TextStyle(fontWeight: FontWeight.w600),
+                        trailing: ConstrainedBox(
+                          constraints: const BoxConstraints(maxWidth: 180),
+                          child: Text(
+                            _movement.fecha,
+                            style: const TextStyle(fontWeight: FontWeight.w600),
+                            overflow: TextOverflow.ellipsis,
+                            maxLines: 1,
+                            textAlign: TextAlign.end,
+                          ),
                         ),
                       ),
                       if (_movement.descripcion.isNotEmpty) ...[

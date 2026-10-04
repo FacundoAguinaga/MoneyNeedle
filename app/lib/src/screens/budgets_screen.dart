@@ -391,6 +391,8 @@ class _BudgetsScreenState extends State<BudgetsScreen> {
                                   fontWeight: FontWeight.bold,
                                   fontSize: 16,
                                 ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
                               ),
                             ),
                             if (b.isOverBudget)
@@ -460,15 +462,23 @@ class _BudgetsScreenState extends State<BudgetsScreen> {
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Text(
-                              'Gastado: ${_formatAmount(b.spentAmount)} (${b.spentPercentage.toStringAsFixed(0)}%)',
-                              style: theme.textTheme.bodySmall?.copyWith(
-                                color: theme.colorScheme.onSurfaceVariant,
+                            Expanded(
+                              child: Text(
+                                'Gastado: ${_formatAmount(b.spentAmount)} (${b.spentPercentage.toStringAsFixed(0)}%)',
+                                style: theme.textTheme.bodySmall?.copyWith(
+                                  color: theme.colorScheme.onSurfaceVariant,
+                                ),
+                                overflow: TextOverflow.ellipsis,
                               ),
                             ),
-                            Text(
-                              'Tope: ${_formatAmount(b.budgetAmount)}',
-                              style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 12),
+                            const SizedBox(width: 8),
+                            Flexible(
+                              child: Text(
+                                'Tope: ${_formatAmount(b.budgetAmount)}',
+                                style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 12),
+                                overflow: TextOverflow.ellipsis,
+                                textAlign: TextAlign.end,
+                              ),
                             ),
                           ],
                         ),
