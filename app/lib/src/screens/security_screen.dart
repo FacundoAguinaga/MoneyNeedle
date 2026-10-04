@@ -127,15 +127,19 @@ class _SecurityScreenState extends State<SecurityScreen> {
   Widget _buildSecurityItem({required String label, required String value}) {
     final theme = Theme.of(context);
     return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         Text(
           label,
           style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
         ),
-        Text(
-          value,
-          style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 12),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Text(
+            value,
+            textAlign: TextAlign.end,
+            style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 12),
+          ),
         ),
       ],
     );
